@@ -8,7 +8,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * Class Init
- * @package Lib\Command
+ * @package DbMigrations\Command
  */
 class Init extends AbstractCommand
 {

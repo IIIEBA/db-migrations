@@ -9,7 +9,7 @@ use Symfony\Component\Filesystem\Filesystem;
 
 /**
  * Class Migration
- * @package Lib\Component
+ * @package DbMigrations\Component
  */
 class Migration
 {
@@ -43,13 +43,42 @@ class Migration
     public function __construct(
         \PDO $pdo,
         $schemaFolderPath,
-        $logger = null
+        LoggerInterface $logger = null
     ) {
+        if (!is_string($schemaFolderPath)) {
+            throw new NotStringException("schemaFolderPath");
+        }
+        if ($schemaFolderPath === "") {
+            throw new EmptyStringException("schemaFolderPath");
+        }
+        
         $this->pdo = $pdo;
-        $this->schemaFolderPath = rtrim($schemaFolderPath, "/");
+        $this->schemaFolderPath = rtrim($this->detectSchemaPath($schemaFolderPath), "/");
         $this->logger = $logger;
 
         $this->filesystem = new Filesystem();
+    }
+
+    /**
+     * Detect real path of schema folder
+     *
+     * @param string $path
+     * @return string
+     */
+    public function detectSchemaPath($path)
+    {
+        if (mb_strrpos($path, "/") !== 0) {
+            $filesList = get_included_files();
+            foreach ($filesList as $elm) {
+                if (mb_strrpos($elm, "vendor/autoload.php") !== false) {
+                    $baseDir = dirname($elm);
+                    $path = realpath("{$baseDir}/../{$path}");
+                    break;
+                }
+            }
+        }
+
+        return $path;
     }
 
     /**

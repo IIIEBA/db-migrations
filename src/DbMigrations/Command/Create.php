@@ -9,7 +9,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * Class Create
- * @package Lib\Command
+ * @package DbMigrations\Command
  */
 class Create extends AbstractCommand
 {

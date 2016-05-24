@@ -8,7 +8,7 @@ use Psr\Log\NullLogger;
 
 /**
  * Class AbstractMigration
- * @package Lib\Component
+ * @package DbMigrations\Component
  */
 class AbstractMigration
 {
@@ -24,11 +24,11 @@ class AbstractMigration
     /**
      * AbstractMigration constructor.
      * @param \PDO $pdo
-     * @param null $logger
+     * @param LoggerInterface|null $logger
      */
     public function __construct(
         \PDO $pdo,
-        $logger = null
+        LoggerInterface $logger = null
     ) {
         $this->pdo = $pdo;
 

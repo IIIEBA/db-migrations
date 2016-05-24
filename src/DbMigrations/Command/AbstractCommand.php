@@ -2,6 +2,8 @@
 
 namespace DbMigrations\Command;
 
+use BaseExceptions\Exception\InvalidArgument\EmptyStringException;
+use BaseExceptions\Exception\InvalidArgument\NotStringException;
 use DbMigrations\Component\Migration;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -9,7 +11,7 @@ use Symfony\Component\Console\Command\Command;
 
 /**
  * Class AbstractCommand
- * @package Lib\Command
+ * @package DbMigrations\Command
  */
 abstract class AbstractCommand extends Command
 {
@@ -40,9 +42,16 @@ abstract class AbstractCommand extends Command
     public function __construct(
         \PDO $pdo,
         $schemaFolderPath,
-        $logger = null,
+        LoggerInterface $logger = null,
         $name = null
     ) {
+        if (!is_string($schemaFolderPath)) {
+            throw new NotStringException("schemaFolderPath");
+        }
+        if ($schemaFolderPath === "") {
+            throw new EmptyStringException("schemaFolderPath");
+        }
+
         $this->pdo = $pdo;
         $this->schemaFolderPath = $schemaFolderPath;
         $this->migrationComponent = new Migration($pdo, $schemaFolderPath, $logger);
