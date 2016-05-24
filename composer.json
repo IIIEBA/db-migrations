@@ -1,13 +1,24 @@
 {
-    "name": "ashevchuk/db-migrations",
-    "description": "DB Migration tool",
-    "license": "MIT",
-    "authors": [
-        {
-            "name": "Andrew shevchuk",
-            "email": "andrey.shevchuk@maxpay.com"
-        }
-    ],
-    "minimum-stability": "stable",
-    "require": {}
+  "name": "ashevchuk/db-migrations",
+  "description": "DB Migration tool",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Andrew shevchuk",
+      "email": "andrey.shevchuk@maxpay.com"
+    }
+  ],
+  "minimum-stability": "stable",
+  "autoload": {
+    "psr-0": {
+      "": "src/"
+    }
+  },
+  "require": {
+    "ashevchuk/base-exceptions": "^0.1.3",
+    "ashevchuk/enum": "^0.1.3",
+    "symfony/console": "^3.0",
+    "symfony/filesystem": "^3.0",
+    "psr/log": "^1.0"
+  }
 }
