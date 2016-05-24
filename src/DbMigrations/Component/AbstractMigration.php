@@ -1,6 +1,6 @@
 <?php
 
-namespace Lib\Component;
+namespace DbMigrations\Component;
 
 use BaseExceptions\Exception\LogicException\NotImplementedException;
 use Psr\Log\LoggerInterface;

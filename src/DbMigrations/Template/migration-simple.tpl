@@ -1,7 +1,7 @@
 <?php
 
 use BaseExceptions\Exception\LogicException\NotImplementedException;
-use Lib\Component\AbstractMigration;
+use DbMigrations\Component\AbstractMigration;
 
 /**
  * Simple migration

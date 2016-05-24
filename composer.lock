@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "570a5d2d5caf7cafbe84eb3f1e78eb55",
-    "content-hash": "fdd169692c97443910adb259c65b2893",
+    "hash": "f4f97be11f29c5441358810a768b831b",
+    "content-hash": "388ac4396524056ea6012e7255bddf77",
     "packages": [
         {
             "name": "ashevchuk/base-exceptions",

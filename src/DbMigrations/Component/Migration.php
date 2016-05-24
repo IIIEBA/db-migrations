@@ -1,6 +1,6 @@
 <?php
 
-namespace Lib\Component;
+namespace DbMigrations\Component;
 
 use BaseExceptions\Exception\InvalidArgument\EmptyStringException;
 use BaseExceptions\Exception\InvalidArgument\NotStringException;
@@ -77,7 +77,9 @@ class Migration
         $this->createFolderIfNotExist($migrationsFolderPath);
 
 
-        $pattern = file_get_contents(self::TEMPLATE_FOLDER_PATH . "/migration-" . ($simple ? "simple" : "safe") . ".tpl");
+        $pattern = file_get_contents(
+            self::TEMPLATE_FOLDER_PATH . "/migration-" . ($simple ? "simple" : "safe") . ".tpl"
+        );
         $generatedName = date("Ymd-") . $name;
 
         file_put_contents(

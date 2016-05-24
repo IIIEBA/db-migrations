@@ -1,8 +1,8 @@
 <?php
 
-namespace Lib\Command;
+namespace DbMigrations\Command;
 
-use Lib\Component\Migration;
+use DbMigrations\Component\Migration;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
