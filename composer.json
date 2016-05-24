@@ -1,0 +1,13 @@
+{
+    "name": "ashevchuk/db-migrations",
+    "description": "DB Migration tool",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Andrew shevchuk",
+            "email": "andrey.shevchuk@maxpay.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {}
+}
