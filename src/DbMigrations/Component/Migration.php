@@ -53,7 +53,7 @@ class Migration
         }
         
         $this->pdo = $pdo;
-        $this->schemaFolderPath = rtrim($this->detectSchemaPath($schemaFolderPath), "/");
+        $this->schemaFolderPath = $this->detectSchemaPath($schemaFolderPath);
         $this->logger = $logger;
 
         $this->filesystem = new Filesystem();
@@ -72,13 +72,13 @@ class Migration
             foreach ($filesList as $elm) {
                 if (mb_strrpos($elm, "vendor/autoload.php") !== false) {
                     $baseDir = dirname($elm);
-                    $path = realpath("{$baseDir}/../{$path}");
+                    $path = "{$baseDir}/../{$path}";
                     break;
                 }
             }
         }
 
-        return $path;
+        return rtrim($path, "/");
     }
 
     /**
