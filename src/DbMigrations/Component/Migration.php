@@ -99,8 +99,8 @@ class Migration
         if ($name === "") {
             throw new EmptyStringException("name");
         }
-        if (!preg_match("/[a-zA-Z0-9-]+$/", $name)) {
-            throw new \InvalidArgumentException("Name must match [a-zA-Z0-9-]+");
+        if (!preg_match("~^[a-z0-9-]+[a-z0-9]+$~is", $name)) {
+            throw new \InvalidArgumentException("Name must match ^[a-zA-Z0-9-]+[a-zA-Z0-9]+");
         }
 
         // Create need folders if they not exists
