@@ -20,17 +20,10 @@ class Init extends AbstractCommand
         $this->setName("db-migrations:init");
         $this->setDescription("Init db from schema files");
         $this->addOption(
-            "with-data",
+            "without-data",
             null,
             InputOption::VALUE_NONE,
             "Add init data from 'init' folder",
-            null
-        );
-        $this->addOption(
-            "init-folder",
-            null,
-            InputOption::VALUE_OPTIONAL,
-            "Custom path to list of init data SQL files",
             null
         );
         $this->addOption(
@@ -40,6 +33,13 @@ class Init extends AbstractCommand
             "Force init will remove existed tables and create new",
             null
         );
+        $this->addOption(
+            "schema-folder",
+            null,
+            InputOption::VALUE_OPTIONAL,
+            "Custom path to schema folder",
+            null
+        );
     }
 
     /**
@@ -47,6 +47,10 @@ class Init extends AbstractCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        var_dump($input->getOption("with-data"));
+        $migrationsList = $this->getMigrationComponent()->initDb(
+            boolval($input->getOption("without-data")),
+            boolval($input->getOption("force")),
+            $input->getOption("schema-folder")
+        );
     }
 }

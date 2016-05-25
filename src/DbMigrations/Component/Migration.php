@@ -3,6 +3,7 @@
 namespace DbMigrations\Component;
 
 use BaseExceptions\Exception\InvalidArgument\EmptyStringException;
+use BaseExceptions\Exception\InvalidArgument\NotBooleanException;
 use BaseExceptions\Exception\InvalidArgument\NotStringException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Filesystem;
@@ -14,6 +15,8 @@ use Symfony\Component\Filesystem\Filesystem;
 class Migration
 {
     const MIGRATIONS_FOLDER_NAME = "migrations";
+    const MIGRATIONS_LOG_FILE_NAME = ".migrations-log.yml";
+    const INIT_DATA_FOLDER_NAME = "init";
     const TEMPLATE_FOLDER_PATH = __DIR__ . "/../Template";
     const CLASS_NAME_PLACEHOLDER = "%class-name%";
 
@@ -26,7 +29,7 @@ class Migration
      */
     private $schemaFolderPath;
     /**
-     * @var null|LoggerInterface
+     * @var LoggerInterface
      */
     private $logger;
     /**
@@ -53,19 +56,19 @@ class Migration
         }
         
         $this->pdo = $pdo;
-        $this->schemaFolderPath = $this->detectSchemaPath($schemaFolderPath);
+        $this->schemaFolderPath = $this->detectPath($schemaFolderPath);
         $this->logger = $logger;
 
         $this->filesystem = new Filesystem();
     }
 
     /**
-     * Detect real path of schema folder
+     * Detect real path of for selected folder
      *
      * @param string $path
      * @return string
      */
-    public function detectSchemaPath($path)
+    public function detectPath($path)
     {
         if (mb_strrpos($path, "/") !== 0) {
             $filesList = get_included_files();
@@ -120,6 +123,69 @@ class Migration
     }
 
     /**
+     * Init new db from schema files and add data to them from init folder if need
+     * 
+     * @param bool $withoutData
+     * @param bool $force
+     * @param string|null $schemaFolderPath
+     * @return array
+     */
+    public function initDb(
+        $withoutData = false,
+        $force = false,
+        $schemaFolderPath = null
+    ) {
+        if (!is_bool($force)) {
+            throw new NotBooleanException("force");
+        }
+        
+        if (!is_bool($withoutData)) {
+            throw new NotBooleanException("withoutData");
+        }
+        
+        if (!is_null($schemaFolderPath)) {
+            if (!is_string($schemaFolderPath)) {
+                throw new NotStringException("schemaFolderPath");
+            }
+            if ($schemaFolderPath === "") {
+                throw new EmptyStringException("schemaFolderPath");
+            }
+        } else {
+            $schemaFolderPath = $this->schemaFolderPath;
+        }
+
+        // Create folders if not exist
+        $this->createFolderIfNotExist($schemaFolderPath);
+        $migrationsFolderPath = $schemaFolderPath . "/" . self::MIGRATIONS_FOLDER_NAME;
+        $this->createFolderIfNotExist($migrationsFolderPath);
+        $initFolderPath = $schemaFolderPath . "/" . self::INIT_DATA_FOLDER_NAME;
+
+        // Create migrations log file if not exist
+        $migrationLogFilePath = $migrationsFolderPath . "/" . self::MIGRATIONS_LOG_FILE_NAME;
+        if ($this->filesystem->exists($migrationLogFilePath) === false) {
+            $this->filesystem->touch($migrationLogFilePath);
+        }
+
+        // Apply schema files
+        $schemaList = $this->getSqlFilesByPath($schemaFolderPath);
+        foreach ($schemaList as $path) {
+            $name = pathinfo($path, PATHINFO_FILENAME);
+
+            if ($this->executeSchema($path, $force) === false) {
+                throw new \LogicException("Can`t execute {$name} schema");
+            }
+        }
+
+        // Init tables data if need
+        if ($withoutData) {
+            $initList = $this->filesystem->exists($initFolderPath) ? $this->getSqlFilesByPath($initFolderPath) : [];
+            // TODO: add init data statement
+        }
+
+        return [];
+    }
+    
+    /**
      * Create folder by given path if not exist
      *
      * @param string $path
@@ -136,6 +202,64 @@ class Migration
         if ($this->filesystem->exists($path) === false) {
             $this->filesystem->mkdir($path);
         }
+    }
+
+    /**
+     * Execute schema file with drop syntax if need
+     *
+     * @param string $path
+     * @param bool $recreate
+     * @return bool
+     */
+    public function executeSchema($path, $recreate = false)
+    {
+        if (!is_string($path)) {
+            throw new NotStringException("path");
+        }
+        if ($path === "") {
+            throw new EmptyStringException("path");
+        }
+
+        if (!is_bool($recreate)) {
+            throw new NotBooleanException("recreate");
+        }
+
+        if ($recreate) {
+            // TODO: add drop table syntax
+        }
+
+        return $this->pdo->exec(file_get_contents($path)) !== false;
+    }
+
+    /**
+     * Get list of SQL files in given path
+     *
+     * @param string $path
+     * @return string[]
+     */
+    public function getSqlFilesByPath($path)
+    {
+        if (!is_string($path)) {
+            throw new NotStringException("path");
+        }
+        if ($path === "") {
+            throw new EmptyStringException("path");
+        }
+
+        $sqlList = [];
+        $filesList = scandir($path);
+        foreach ($filesList as $name) {
+            $filePath = $path . "/{$name}";
+
+            // Skip directories and not SQL files
+            if (is_dir($filePath) || pathinfo($filePath, PATHINFO_EXTENSION) !== "sql") {
+                continue;
+            }
+
+            $sqlList[] = $filePath;
+        }
+
+        return $sqlList;
     }
 
     /**

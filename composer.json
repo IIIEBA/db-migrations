@@ -4,8 +4,8 @@
   "license": "MIT",
   "authors": [
     {
-      "name": "Andrew shevchuk",
-      "email": "andrey.shevchuk@maxpay.com"
+      "name": "Andrew Shevchuk",
+      "email": "shevchuk@be-aware.com.ua"
     }
   ],
   "minimum-stability": "stable",
@@ -14,11 +14,15 @@
       "": "src"
     }
   },
+  "bin": [
+    "bin/db-migration"
+  ],
   "require": {
     "ashevchuk/base-exceptions": "^0.1.3",
     "ashevchuk/enum": "^0.1.3",
     "symfony/console": "^3.0",
     "symfony/filesystem": "^3.0",
+    "symfony/yaml": "^3.0",
     "psr/log": "^1.0"
   }
 }

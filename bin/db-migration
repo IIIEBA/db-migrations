@@ -1,0 +1,28 @@
+#!/usr/bin/env php
+
+<?php
+
+// Looking for composer
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    $rootPath = realpath(__DIR__ . "/../");
+} elseif (file_exists(__DIR__ . '/../../../autoload.php')) {
+    $rootPath = realpath(__DIR__ . "/../../../../");
+} else {
+    echo "Composer autoloader not found\n\n";
+    exit(1);
+}
+
+// Loading autoloader
+require $rootPath . "/vendor/autoload.php";
+
+use DbMigrations\Command\Create;
+use DbMigrations\Command\Init;
+use Symfony\Component\Console\Application;
+
+$pdo = new \PDO("mysql:host=127.0.0.1;dbname=project-x;charset=utf8", "project-x", "project-x");
+$path = "schema";
+
+$application = new Application();
+$application->add(new Create($pdo, $path));
+$application->add(new Init($pdo, $path));
+$application->run();
