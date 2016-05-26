@@ -59,6 +59,11 @@ abstract class AbstractCommand extends Command
         if (is_null($logger)) {
             $this->logger = new NullLogger();
         }
+        
+        // Set few params to PDO
+        $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        $this->pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
+
         parent::__construct($name);
     }
 

@@ -19,7 +19,11 @@ use DbMigrations\Command\Create;
 use DbMigrations\Command\Init;
 use Symfony\Component\Console\Application;
 
-$pdo = new \PDO("mysql:host=127.0.0.1;dbname=project-x;charset=utf8", "project-x", "project-x");
+$pdo = new \PDO(
+    "mysql:host=127.0.0.1;dbname=project-x;charset=utf8",
+    "project-x",
+    "project-x"
+);
 $path = "schema";
 
 $application = new Application();

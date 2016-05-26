@@ -23,7 +23,14 @@ class Init extends AbstractCommand
             "without-data",
             null,
             InputOption::VALUE_NONE,
-            "Add init data from 'init' folder",
+            "Skip init data from 'init' folder",
+            null
+        );
+        $this->addOption(
+            "skip-exists",
+            null,
+            InputOption::VALUE_NONE,
+            "Skip existed tables",
             null
         );
         $this->addOption(
@@ -49,6 +56,7 @@ class Init extends AbstractCommand
     {
         $migrationsList = $this->getMigrationComponent()->initDb(
             boolval($input->getOption("without-data")),
+            boolval($input->getOption("skip-exists")),
             boolval($input->getOption("force")),
             $input->getOption("schema-folder")
         );

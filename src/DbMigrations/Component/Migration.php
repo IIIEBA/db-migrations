@@ -5,6 +5,7 @@ namespace DbMigrations\Component;
 use BaseExceptions\Exception\InvalidArgument\EmptyStringException;
 use BaseExceptions\Exception\InvalidArgument\NotBooleanException;
 use BaseExceptions\Exception\InvalidArgument\NotStringException;
+use PDOException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 
@@ -124,19 +125,25 @@ class Migration
 
     /**
      * Init new db from schema files and add data to them from init folder if need
-     * 
+     *
      * @param bool $withoutData
+     * @param bool $skipExists
      * @param bool $force
      * @param string|null $schemaFolderPath
      * @return array
      */
     public function initDb(
         $withoutData = false,
+        $skipExists = false,
         $force = false,
         $schemaFolderPath = null
     ) {
         if (!is_bool($force)) {
             throw new NotBooleanException("force");
+        }
+
+        if (!is_bool($skipExists)) {
+            throw new NotBooleanException("skipExisted");
         }
         
         if (!is_bool($withoutData)) {
@@ -158,7 +165,6 @@ class Migration
         $this->createFolderIfNotExist($schemaFolderPath);
         $migrationsFolderPath = $schemaFolderPath . "/" . self::MIGRATIONS_FOLDER_NAME;
         $this->createFolderIfNotExist($migrationsFolderPath);
-        $initFolderPath = $schemaFolderPath . "/" . self::INIT_DATA_FOLDER_NAME;
 
         // Create migrations log file if not exist
         $migrationLogFilePath = $migrationsFolderPath . "/" . self::MIGRATIONS_LOG_FILE_NAME;
@@ -168,21 +174,102 @@ class Migration
 
         // Apply schema files
         $schemaList = $this->getSqlFilesByPath($schemaFolderPath);
-        foreach ($schemaList as $path) {
-            $name = pathinfo($path, PATHINFO_FILENAME);
+        foreach ($schemaList as $elm) {
+            $this->initTable($elm, $withoutData, $skipExists, $force);
+        }
 
-            if ($this->executeSchema($path, $force) === false) {
-                throw new \LogicException("Can`t execute {$name} schema");
+        return $schemaList;
+    }
+
+    /**
+     * Execute schema file with drop syntax if need
+     *
+     * @param string $path
+     * @param bool $withoutData
+     * @param bool $skipExists
+     * @param bool $force
+     * @return bool
+     */
+    public function initTable(
+        $path,
+        $withoutData = false,
+        $skipExists = false,
+        $force = false
+        )
+    {
+        if (!is_string($path)) {
+            throw new NotStringException("path");
+        }
+        if ($path === "") {
+            throw new EmptyStringException("path");
+        }
+
+        if (!is_bool($withoutData)) {
+            throw new NotBooleanException("withoutData");
+        }
+
+        if (!is_bool($skipExists)) {
+            throw new NotBooleanException("skipExisted");
+        }
+
+        if (!is_bool($force)) {
+            throw new NotBooleanException("force");
+        }
+
+        // Parse migration file
+        $schemaName = pathinfo($path, PATHINFO_FILENAME);
+        $schemaContent = file_get_contents($path);
+        if (empty($schemaContent)) {
+            throw new \LogicException("Schema file `{$schemaName}` is empty");
+        }
+
+        // Check migration for create syntax
+        $schemaContentParts = explode("\n", $schemaContent);
+        $schemaFirstLine = reset($schemaContentParts);
+        if (
+            preg_match(
+                "~^CREATE\\s+TABLE\\s+\\`([a-z][a-zA-Z0-9]*[a-z0-9])\\`\\s+\\($~",
+                $schemaFirstLine,
+                $matches
+            ) == false
+        ) {
+            throw new \LogicException(
+                "Schema file `{$schemaName}` must start from 'CREATE TABLE `%NAME%` (' statement"
+            );
+        }
+        $tableName = end($matches);
+
+        // Check is table exists
+        $isTableExists = $this->pdo->query("SHOW TABLES LIKE '{$tableName}'")->rowCount();
+        if ($isTableExists) {
+            if ($skipExists) {
+                return false;
+            } elseif (!$force) {
+                throw new \LogicException("Table `{$tableName}` already exists", 100);
             }
         }
 
-        // Init tables data if need
-        if ($withoutData) {
-            $initList = $this->filesystem->exists($initFolderPath) ? $this->getSqlFilesByPath($initFolderPath) : [];
-            // TODO: add init data statement
+        // Create table
+        try {
+            $this->pdo->exec("DROP TABLE IF EXISTS `{$tableName}`");
+            $this->pdo->exec($schemaContent);
+        } catch (PDOException $error) {
+            throw new \LogicException("Can`t create table `{$tableName}` from schema `{$schemaName}`", 101, $error);
         }
 
-        return [];
+        // Trying to init table data
+        $pathInfo = pathinfo($path);
+        $schemaFolderPath = $pathInfo["dirname"];
+        $initFilePath = $schemaFolderPath . "/" . self::INIT_DATA_FOLDER_NAME . "/" . $pathInfo["basename"];
+        if (!$withoutData && $this->filesystem->exists($initFilePath)) {
+            try {
+                $this->pdo->exec(file_get_contents($initFilePath));
+            } catch (PDOException $error) {
+                throw new \LogicException("Can`t init data for `{$tableName}`", 102, $error);
+            }
+        }
+
+        return true;
     }
     
     /**
@@ -202,33 +289,6 @@ class Migration
         if ($this->filesystem->exists($path) === false) {
             $this->filesystem->mkdir($path);
         }
-    }
-
-    /**
-     * Execute schema file with drop syntax if need
-     *
-     * @param string $path
-     * @param bool $recreate
-     * @return bool
-     */
-    public function executeSchema($path, $recreate = false)
-    {
-        if (!is_string($path)) {
-            throw new NotStringException("path");
-        }
-        if ($path === "") {
-            throw new EmptyStringException("path");
-        }
-
-        if (!is_bool($recreate)) {
-            throw new NotBooleanException("recreate");
-        }
-
-        if ($recreate) {
-            // TODO: add drop table syntax
-        }
-
-        return $this->pdo->exec(file_get_contents($path)) !== false;
     }
 
     /**
