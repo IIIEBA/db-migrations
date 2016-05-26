@@ -10,6 +10,7 @@ use DbMigrations\Model\InitDbResultInterface;
 use DbMigrations\Model\InitTableResult;
 use DbMigrations\Model\InitTableResultInterface;
 use DbMigrations\Model\InitTableStatus;
+use DbMigrations\Util\PathInfo;
 use PDOException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Filesystem;
@@ -97,8 +98,10 @@ class Migration
      * @param bool $simple
      * @return string
      */
-    public function createMigration($name, $simple = true)
-    {
+    public function createMigration(
+        $name,
+        $simple = true
+    ) {
         if (!is_string($name)) {
             throw new NotStringException("name");
         }
@@ -236,7 +239,8 @@ class Migration
         }
 
         // Parse migration file
-        $schemaName = pathinfo($path, PATHINFO_FILENAME);
+        $pathInfo = new PathInfo($path);
+        $schemaName = $pathInfo->getFilename();
         $schemaContent = file_get_contents($path);
         if (empty($schemaContent)) {
             $msg = "Schema file `{$schemaName}` is empty";
@@ -248,21 +252,8 @@ class Migration
             );
         }
 
-        // Check migration for create syntax
-        $schemaContentParts = explode("\n", $schemaContent);
-        $schemaFirstLine = reset($schemaContentParts);
-        if (
-            preg_match(
-                "~^CREATE\\s+TABLE\\s+\\`([a-z][a-zA-Z0-9]*[a-z0-9])\\`\\s+\\($~",
-                $schemaFirstLine,
-                $matches
-            ) == false
-        ) {
-            throw new \LogicException(
-                "Schema file `{$schemaName}` must start from 'CREATE TABLE `%NAME%` (' statement"
-            );
-        }
-        $tableName = end($matches);
+        // Check migration for create syntax and get name
+        $tableName = $this->getTableNameFromSchemaPath($path);
 
         // Check is table exists
         $isTableExists = $this->pdo->query("SHOW TABLES LIKE '{$tableName}'")->rowCount();
@@ -299,9 +290,9 @@ class Migration
 
         // Trying to init table data
         $status = InitTableStatus::CREATED_WITHOUT_DATA;
-        $pathInfo = pathinfo($path);
-        $schemaFolderPath = $pathInfo["dirname"];
-        $initFilePath = $schemaFolderPath . "/" . self::INIT_DATA_FOLDER_NAME . "/" . $pathInfo["basename"];
+        $pathInfo = new PathInfo($path);
+        $schemaFolderPath = $pathInfo->getDirname();
+        $initFilePath = $schemaFolderPath . "/" . self::INIT_DATA_FOLDER_NAME . "/" . $pathInfo->getBasename();
         if (!$withoutData && $this->filesystem->exists($initFilePath)) {
             try {
                 $this->pdo->exec(file_get_contents($initFilePath));
@@ -316,7 +307,53 @@ class Migration
             new InitTableStatus($status)
         );
     }
-    
+
+    public function tablesStatus(
+        $name = null,
+        $diff = false
+    ) {
+
+    }
+
+    /**
+     * Chane schema syntax and get table name by schema path
+     *
+     * @param string $path
+     * @return string
+     */
+    public function getTableNameFromSchemaPath($path)
+    {
+        if (!is_string($path)) {
+            throw new NotStringException("path");
+        }
+        if ($path === "") {
+            throw new EmptyStringException("path");
+        }
+
+        $pathInfo = new PathInfo($path);
+
+        if ($this->filesystem->exists($path) === false) {
+            throw new \LogicException("Can`t file schema file by given path `{$pathInfo->getFilename()}`");
+        }
+
+        $schemaContent = file_get_contents($path);
+        $schemaContentParts = explode("\n", $schemaContent);
+        $schemaFirstLine = reset($schemaContentParts);
+        if (
+            preg_match(
+                "~^CREATE\\s+TABLE\\s+\\`([a-z][a-zA-Z0-9]*[a-z0-9])\\`\\s+\\($~",
+                $schemaFirstLine,
+                $matches
+            ) == false
+        ) {
+            throw new \LogicException(
+                "Schema file `{$pathInfo->getFilename()}` must start from 'CREATE TABLE `%NAME%` (' statement"
+            );
+        }
+
+        return end($matches);
+    }
+
     /**
      * Create folder by given path if not exist
      *
@@ -357,7 +394,8 @@ class Migration
             $filePath = $path . "/{$name}";
 
             // Skip directories and not SQL files
-            if (is_dir($filePath) || pathinfo($filePath, PATHINFO_EXTENSION) !== "sql") {
+            $pathInfo = new PathInfo($filePath);
+            if (is_dir($filePath) || $pathInfo->getExtension() !== "sql") {
                 continue;
             }
 

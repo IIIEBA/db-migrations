@@ -17,6 +17,7 @@ require $rootPath . "/vendor/autoload.php";
 
 use DbMigrations\Command\Create;
 use DbMigrations\Command\Init;
+use DbMigrations\Command\Status;
 use Symfony\Component\Console\Application;
 
 $pdo = new \PDO(
@@ -29,4 +30,5 @@ $path = "schema";
 $application = new Application();
 $application->add(new Create($pdo, $path));
 $application->add(new Init($pdo, $path));
+$application->add(new Status($pdo, $path));
 $application->run();
