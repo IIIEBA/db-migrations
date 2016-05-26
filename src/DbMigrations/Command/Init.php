@@ -3,6 +3,7 @@
 namespace DbMigrations\Command;
 
 use DbMigrations\Model\InitTableStatus;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -18,8 +19,14 @@ class Init extends AbstractCommand
      */
     protected function configure()
     {
-        $this->setName("db-migrations:init");
+        $this->setName("db-migrations:init-schema");
         $this->setDescription("Init db from schema files");
+        $this->addArgument(
+            "name",
+            InputArgument::OPTIONAL,
+            "Init only one schema file",
+            null
+        );
         $this->addOption(
             "without-data",
             null,
@@ -59,6 +66,7 @@ class Init extends AbstractCommand
             boolval($input->getOption("without-data")),
             boolval($input->getOption("skip-exists")),
             boolval($input->getOption("force")),
+            $input->getArgument("name"),
             $input->getOption("schema-folder")
         );
 

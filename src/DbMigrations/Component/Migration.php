@@ -134,6 +134,7 @@ class Migration
      * @param bool $withoutData
      * @param bool $skipExists
      * @param bool $force
+     * @param string|null $schemaName
      * @param string|null $schemaFolderPath
      * @return InitDbResultInterface
      */
@@ -141,6 +142,7 @@ class Migration
         $withoutData = false,
         $skipExists = false,
         $force = false,
+        $schemaName = null,
         $schemaFolderPath = null
     ) {
         if (!is_bool($force)) {
@@ -154,7 +156,16 @@ class Migration
         if (!is_bool($withoutData)) {
             throw new NotBooleanException("withoutData");
         }
-        
+
+        if (!is_null($schemaName)) {
+            if (!is_string($schemaName)) {
+                throw new NotStringException("schemaName");
+            }
+            if ($schemaName === "") {
+                throw new EmptyStringException("schemaName");
+            }
+        }
+
         if (!is_null($schemaFolderPath)) {
             if (!is_string($schemaFolderPath)) {
                 throw new NotStringException("schemaFolderPath");
@@ -170,17 +181,18 @@ class Migration
 
         // Create folders if not exist
         $this->createFolderIfNotExist($schemaFolderPath);
-        $migrationsFolderPath = $schemaFolderPath . "/" . self::MIGRATIONS_FOLDER_NAME;
-        $this->createFolderIfNotExist($migrationsFolderPath);
-
-        // Create migrations log file if not exist
-        $migrationLogFilePath = $migrationsFolderPath . "/" . self::MIGRATIONS_LOG_FILE_NAME;
-        if ($this->filesystem->exists($migrationLogFilePath) === false) {
-            $this->filesystem->touch($migrationLogFilePath);
-        }
 
         // Apply schema files
-        $schemaList = $this->getSqlFilesByPath($schemaFolderPath);
+        if (!is_null($schemaName)) {
+            $selectedSchemaName = $schemaFolderPath . "/" . $schemaName . ".sql";
+            if ($this->filesystem->exists($selectedSchemaName) === false) {
+                throw new \LogicException("Can`t find schema with name {$schemaName}");
+            }
+
+            $schemaList = [$selectedSchemaName];
+        } else {
+            $schemaList = $this->getSqlFilesByPath($schemaFolderPath);
+        }
         foreach ($schemaList as $elm) {
             $result->addTableResult($this->initTable($elm, $withoutData, $skipExists, $force));
         }
