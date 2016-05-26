@@ -2,6 +2,7 @@
 
 namespace DbMigrations\Command;
 
+use DbMigrations\Model\InitTableStatus;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -60,5 +61,12 @@ class Init extends AbstractCommand
             boolval($input->getOption("force")),
             $input->getOption("schema-folder")
         );
+
+        foreach ($migrationsList->getResult() as $name => $result) {
+            $output->writeln("<info>$name - " . $result->getStatus()->getValue() . "</info>");
+            if ($output->isVerbose() && $result->getStatus()->getValue() === InitTableStatus::ERROR) {
+                $output->writeln("<error>" . $result->getDesc() . "</error>");
+            }
+        }
     }
 }

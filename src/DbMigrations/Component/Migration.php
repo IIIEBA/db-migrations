@@ -5,6 +5,11 @@ namespace DbMigrations\Component;
 use BaseExceptions\Exception\InvalidArgument\EmptyStringException;
 use BaseExceptions\Exception\InvalidArgument\NotBooleanException;
 use BaseExceptions\Exception\InvalidArgument\NotStringException;
+use DbMigrations\Model\InitDbResult;
+use DbMigrations\Model\InitDbResultInterface;
+use DbMigrations\Model\InitTableResult;
+use DbMigrations\Model\InitTableResultInterface;
+use DbMigrations\Model\InitTableStatus;
 use PDOException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Filesystem;
@@ -130,7 +135,7 @@ class Migration
      * @param bool $skipExists
      * @param bool $force
      * @param string|null $schemaFolderPath
-     * @return array
+     * @return InitDbResultInterface
      */
     public function initDb(
         $withoutData = false,
@@ -161,6 +166,8 @@ class Migration
             $schemaFolderPath = $this->schemaFolderPath;
         }
 
+        $result = new InitDbResult();
+
         // Create folders if not exist
         $this->createFolderIfNotExist($schemaFolderPath);
         $migrationsFolderPath = $schemaFolderPath . "/" . self::MIGRATIONS_FOLDER_NAME;
@@ -175,10 +182,10 @@ class Migration
         // Apply schema files
         $schemaList = $this->getSqlFilesByPath($schemaFolderPath);
         foreach ($schemaList as $elm) {
-            $this->initTable($elm, $withoutData, $skipExists, $force);
+            $result->addTableResult($this->initTable($elm, $withoutData, $skipExists, $force));
         }
 
-        return $schemaList;
+        return $result;
     }
 
     /**
@@ -188,7 +195,7 @@ class Migration
      * @param bool $withoutData
      * @param bool $skipExists
      * @param bool $force
-     * @return bool
+     * @return InitTableResultInterface
      */
     public function initTable(
         $path,
@@ -220,7 +227,13 @@ class Migration
         $schemaName = pathinfo($path, PATHINFO_FILENAME);
         $schemaContent = file_get_contents($path);
         if (empty($schemaContent)) {
-            throw new \LogicException("Schema file `{$schemaName}` is empty");
+            $msg = "Schema file `{$schemaName}` is empty";
+
+            return new InitTableResult(
+                $schemaName,
+                new InitTableStatus(InitTableStatus::ERROR),
+                $msg
+            );
         }
 
         // Check migration for create syntax
@@ -243,9 +256,18 @@ class Migration
         $isTableExists = $this->pdo->query("SHOW TABLES LIKE '{$tableName}'")->rowCount();
         if ($isTableExists) {
             if ($skipExists) {
-                return false;
+                return new InitTableResult(
+                    $tableName,
+                    new InitTableStatus(InitTableStatus::ALREADY_EXISTS)
+                );
             } elseif (!$force) {
-                throw new \LogicException("Table `{$tableName}` already exists", 100);
+                $msg = "Table `{$tableName}` already exists";
+
+                return new InitTableResult(
+                    $tableName,
+                    new InitTableStatus(InitTableStatus::ERROR),
+                    $msg
+                );
             }
         }
 
@@ -254,22 +276,33 @@ class Migration
             $this->pdo->exec("DROP TABLE IF EXISTS `{$tableName}`");
             $this->pdo->exec($schemaContent);
         } catch (PDOException $error) {
-            throw new \LogicException("Can`t create table `{$tableName}` from schema `{$schemaName}`", 101, $error);
+            $msg = "Can`t create table `{$tableName}` from schema `{$schemaName}`";
+            
+            return new InitTableResult(
+                $tableName,
+                new InitTableStatus(InitTableStatus::ERROR),
+                $msg
+            );
         }
 
         // Trying to init table data
+        $status = InitTableStatus::CREATED_WITHOUT_DATA;
         $pathInfo = pathinfo($path);
         $schemaFolderPath = $pathInfo["dirname"];
         $initFilePath = $schemaFolderPath . "/" . self::INIT_DATA_FOLDER_NAME . "/" . $pathInfo["basename"];
         if (!$withoutData && $this->filesystem->exists($initFilePath)) {
             try {
                 $this->pdo->exec(file_get_contents($initFilePath));
+                $status = InitTableStatus::CREATED;
             } catch (PDOException $error) {
                 throw new \LogicException("Can`t init data for `{$tableName}`", 102, $error);
             }
         }
 
-        return true;
+        return new InitTableResult(
+            $tableName,
+            new InitTableStatus($status)
+        );
     }
     
     /**
