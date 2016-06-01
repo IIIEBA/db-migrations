@@ -2,13 +2,14 @@
 
 use BaseExceptions\Exception\LogicException\NotImplementedException;
 use DbMigrations\Component\AbstractMigration;
+use DbMigrations\Component\MigrationInterface;
 
 /**
  * Simple migration
  *
  * Class %class-name%
  */
-class %class-name% extends AbstractMigration
+class %class-name% extends AbstractMigration implements MigrationInterface
 {
     /**
      * Run migration

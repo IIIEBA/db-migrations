@@ -4,7 +4,7 @@ namespace DbMigrations\Command;
 
 use BaseExceptions\Exception\InvalidArgument\EmptyStringException;
 use BaseExceptions\Exception\InvalidArgument\NotStringException;
-use DbMigrations\Component\Migration;
+use DbMigrations\Component\MigrationCore;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
@@ -28,7 +28,7 @@ abstract class AbstractCommand extends Command
      */
     private $logger;
     /**
-     * @var Migration
+     * @var MigrationCore
      */
     private $migrationComponent;
 
@@ -52,14 +52,15 @@ abstract class AbstractCommand extends Command
             throw new EmptyStringException("schemaFolderPath");
         }
 
+        if (is_null($logger)) {
+            $logger = new NullLogger();
+        }
+
         $this->pdo = $pdo;
         $this->schemaFolderPath = $schemaFolderPath;
-        $this->migrationComponent = new Migration($pdo, $schemaFolderPath, $logger);
+        $this->migrationComponent = new MigrationCore($pdo, $schemaFolderPath, $logger);
+        $this->logger = $logger;
 
-        if (is_null($logger)) {
-            $this->logger = new NullLogger();
-        }
-        
         // Set few params to PDO
         $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         $this->pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
@@ -84,7 +85,7 @@ abstract class AbstractCommand extends Command
     }
 
     /**
-     * @return Migration
+     * @return MigrationCore
      */
     public function getMigrationComponent()
     {

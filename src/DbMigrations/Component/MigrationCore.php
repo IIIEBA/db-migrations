@@ -13,13 +13,14 @@ use DbMigrations\Model\InitTableStatus;
 use DbMigrations\Util\PathInfo;
 use PDOException;
 use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\Filesystem\Filesystem;
 
 /**
- * Class Migration
+ * Class MigrationCore
  * @package DbMigrations\Component
  */
-class Migration
+class MigrationCore
 {
     const MIGRATIONS_FOLDER_NAME = "migrations";
     const MIGRATIONS_LOG_FILE_NAME = ".migrations-log.yml";
@@ -45,7 +46,7 @@ class Migration
     private $filesystem;
 
     /**
-     * Migration constructor.
+     * MigrationCore constructor.
      * @param \PDO $pdo
      * @param string $schemaFolderPath
      * @param LoggerInterface|null $logger
@@ -61,12 +62,18 @@ class Migration
         if ($schemaFolderPath === "") {
             throw new EmptyStringException("schemaFolderPath");
         }
-        
+
+        if (is_null($logger)) {
+            $logger = new NullLogger();
+        }
+
+        $this->logger = $logger;
         $this->pdo = $pdo;
         $this->schemaFolderPath = $this->detectPath($schemaFolderPath);
-        $this->logger = $logger;
 
         $this->filesystem = new Filesystem();
+
+        $this->logger->info("MigrationCore was successfully initialized", ["object" => $this]);
     }
 
     /**
@@ -77,6 +84,8 @@ class Migration
      */
     public function detectPath($path)
     {
+        $this->logger->info("Trying to detect path for {path}", ["object" => $this, "path" => $path]);
+
         if (mb_strrpos($path, "/") !== 0) {
             $filesList = get_included_files();
             foreach ($filesList as $elm) {
@@ -88,7 +97,10 @@ class Migration
             }
         }
 
-        return rtrim($path, "/");
+        $path = rtrim($path, "/");
+        $this->logger->info("Path detected as {path}", ["object" => $this, "path" => $path]);
+
+        return $path;
     }
 
     /**
@@ -102,6 +114,8 @@ class Migration
         $name,
         $simple = true
     ) {
+        $this->logger->info("Trying to create migration with name {name}", ["object" => $this, "name" => $name]);
+
         if (!is_string($name)) {
             throw new NotStringException("name");
         }
@@ -117,7 +131,6 @@ class Migration
         $migrationsFolderPath = $this->schemaFolderPath . "/" . self::MIGRATIONS_FOLDER_NAME;
         $this->createFolderIfNotExist($migrationsFolderPath);
 
-
         $pattern = file_get_contents(
             self::TEMPLATE_FOLDER_PATH . "/migration-" . ($simple ? "simple" : "safe") . ".tpl"
         );
@@ -127,6 +140,8 @@ class Migration
             $migrationsFolderPath . "/" . $generatedName . ".php",
             str_replace(self::CLASS_NAME_PLACEHOLDER, $this->convertMigrationNameToClassName($generatedName), $pattern)
         );
+
+        $this->logger->info("Migration was successfully created", ["object" => $this]);
 
         return $generatedName;
     }
@@ -148,6 +163,8 @@ class Migration
         $schemaName = null,
         $schemaFolderPath = null
     ) {
+        $this->logger->info("Trying to init db", ["object" => $this]);
+
         if (!is_bool($force)) {
             throw new NotBooleanException("force");
         }
@@ -167,6 +184,11 @@ class Migration
             if ($schemaName === "") {
                 throw new EmptyStringException("schemaName");
             }
+
+            $this->logger->debug(
+                "Init only one table {schemaName}",
+                ["object" => $this, "schemaName" => $schemaName]
+            );
         }
 
         if (!is_null($schemaFolderPath)) {
@@ -176,7 +198,17 @@ class Migration
             if ($schemaFolderPath === "") {
                 throw new EmptyStringException("schemaFolderPath");
             }
+
+            $this->logger->debug(
+                "Use custom schema folder path {path}",
+                ["object" => $this, "path" => $schemaFolderPath]
+            );
         } else {
+            $this->logger->debug(
+                "Use default schema folder path {path}",
+                ["object" => $this, "path" => $this->schemaFolderPath]
+            );
+
             $schemaFolderPath = $this->schemaFolderPath;
         }
 
@@ -200,6 +232,8 @@ class Migration
             $result->addTableResult($this->initTable($elm, $withoutData, $skipExists, $force));
         }
 
+        $this->logger->info("Db was successfully initialized", ["object" => $this]);
+
         return $result;
     }
 
@@ -219,6 +253,17 @@ class Migration
         $force = false
         )
     {
+        $this->logger->info(
+            "Trying to create table from schema {path}",
+            [
+                "object" => $this,
+                "path" => $path,
+                "withoutData" => $withoutData,
+                "skipExists" => $skipExists,
+                "force" => $force
+            ]
+        );
+
         if (!is_string($path)) {
             throw new NotStringException("path");
         }
@@ -245,12 +290,14 @@ class Migration
         if (empty($schemaContent)) {
             $msg = "Schema file `{$schemaName}` is empty";
 
+            $this->logger->error($msg, ["object" => $this, "schemaName" => $schemaName]);
             return new InitTableResult(
                 $schemaName,
                 new InitTableStatus(InitTableStatus::ERROR),
                 $msg
             );
         }
+        $this->logger->debug("Schema {schema} was successfully parsed", ["object" => $this, "schema" => $schemaName]);
 
         // Check migration for create syntax and get name
         $tableName = $this->getTableNameFromSchemaPath($path);
@@ -259,6 +306,11 @@ class Migration
         $isTableExists = $this->pdo->query("SHOW TABLES LIKE '{$tableName}'")->rowCount();
         if ($isTableExists) {
             if ($skipExists) {
+                $this->logger->debug(
+                    "Table {tableName} is already exist, skip it",
+                    ["object" => $this, "tableName" => $tableName]
+                );
+
                 return new InitTableResult(
                     $tableName,
                     new InitTableStatus(InitTableStatus::ALREADY_EXISTS)
@@ -266,6 +318,7 @@ class Migration
             } elseif (!$force) {
                 $msg = "Table `{$tableName}` already exists";
 
+                $this->logger->error($msg, ["object" => $this, "tableName" => $tableName]);
                 return new InitTableResult(
                     $tableName,
                     new InitTableStatus(InitTableStatus::ERROR),
@@ -278,9 +331,15 @@ class Migration
         try {
             $this->pdo->exec("DROP TABLE IF EXISTS `{$tableName}`");
             $this->pdo->exec($schemaContent);
+
+            $this->logger->debug(
+                "Table {tableName} was successfully created",
+                ["object" => $this, "tableName" => $tableName]
+            );
         } catch (PDOException $error) {
             $msg = "Can`t create table `{$tableName}` from schema `{$schemaName}`";
-            
+
+            $this->logger->error($msg, ["object" => $this, "tableName" => $tableName]);
             return new InitTableResult(
                 $tableName,
                 new InitTableStatus(InitTableStatus::ERROR),
@@ -297,10 +356,23 @@ class Migration
             try {
                 $this->pdo->exec(file_get_contents($initFilePath));
                 $status = InitTableStatus::CREATED;
+
+                $this->logger->debug(
+                    "Data for table {tableName} was successfully initialized",
+                    ["object" => $this, "tableName" => $tableName]
+                );
             } catch (PDOException $error) {
+                $this->logger->error(
+                    $error->getMessage(),
+                    ["object" => $this, "exception" => $error, "tableName" => $tableName]
+                );
                 throw new \LogicException("Can`t init data for `{$tableName}`", 102, $error);
             }
+        } else {
+            $this->logger->debug("Skip init table data for {tableName}", ["object" => $this, "tableName" => $tableName]);
         }
+
+        $this->logger->info("Table init finished for {tableName}", ["object" => $this, "tableName" => $tableName]);
 
         return new InitTableResult(
             $tableName,
@@ -323,6 +395,8 @@ class Migration
      */
     public function getTableNameFromSchemaPath($path)
     {
+        $this->logger->info("Trying to get table name from schema file {path}", ["object" => $this, "path" => $path]);
+
         if (!is_string($path)) {
             throw new NotStringException("path");
         }
@@ -331,7 +405,6 @@ class Migration
         }
 
         $pathInfo = new PathInfo($path);
-
         if ($this->filesystem->exists($path) === false) {
             throw new \LogicException("Can`t file schema file by given path `{$pathInfo->getFilename()}`");
         }
@@ -351,7 +424,10 @@ class Migration
             );
         }
 
-        return end($matches);
+        $name = end($matches);
+        $this->logger->info("Table name was successfully detected - {name}", ["object" => $this, "name" => $name]);
+
+        return $name;
     }
 
     /**
@@ -408,26 +484,33 @@ class Migration
     /**
      * Convert migration name to class name
      *
-     * @param string $name
+     * @param string $migrationName
      * @return string
      */
-    public function convertMigrationNameToClassName($name)
+    public function convertMigrationNameToClassName($migrationName)
     {
-        if (!is_string($name)) {
-            throw new NotStringException("name");
+        if (!is_string($migrationName)) {
+            throw new NotStringException("migrationName");
         }
-        if ($name === "") {
-            throw new EmptyStringException("name");
+        if ($migrationName === "") {
+            throw new EmptyStringException("migrationName");
         }
         
-        list($date, $name) = explode("-", $name, 2);
+        list($date, $name) = explode("-", $migrationName, 2);
         $nameParts = explode("-", $name);
-        
-        return implode("", array_map(
+
+        $className = implode("", array_map(
             function ($elm) {
                 return ucfirst($elm);
             },
             $nameParts
         )) . "_{$date}";
+
+        $this->logger->info(
+            "Migration name {migrationName} was successfully converted to class name - {className}",
+            ["object" => $this, "migrationName" => $migrationName, "className" => $className]
+        );
+
+        return $className;
     }
 }

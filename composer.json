@@ -23,6 +23,7 @@
     "symfony/console": "^3.0",
     "symfony/filesystem": "^3.0",
     "symfony/yaml": "^3.0",
-    "psr/log": "^1.0"
+    "psr/log": "^1.0",
+    "ashevchuk/base-logger": "dev-master"
   }
 }

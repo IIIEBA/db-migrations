@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "6e8f0dda413a3b9a4c0556ff8dcf606a",
-    "content-hash": "644e1ca8d8fee24fd496c2e41c354677",
+    "hash": "8dd6c4d5bae8c4d13d550843cab0c57b",
+    "content-hash": "0a7d4ccb0b5fb39fccb858946c363606",
     "packages": [
         {
             "name": "ashevchuk/base-exceptions",
@@ -36,6 +36,44 @@
             ],
             "description": "List of base exceptions for application",
             "time": "2016-02-25 13:36:04"
+        },
+        {
+            "name": "ashevchuk/base-logger",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/IIIEBA/base-logger.git",
+                "reference": "5d5cf5b3a455aea4d9af6427ac4480622a968197"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/IIIEBA/base-logger/zipball/5d5cf5b3a455aea4d9af6427ac4480622a968197",
+                "reference": "5d5cf5b3a455aea4d9af6427ac4480622a968197",
+                "shasum": ""
+            },
+            "require": {
+                "ashevchuk/base-exceptions": "^0.1.3",
+                "psr/log": "^1.0",
+                "sentry/sentry": "^0.15.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "BaseLogger": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Andrew Shevchuk",
+                    "email": "shevchuk@be-aware.com.ua"
+                }
+            ],
+            "description": "Base logger dispatcher with handlers",
+            "time": "2016-05-19 09:17:38"
         },
         {
             "name": "ashevchuk/enum",
@@ -108,6 +146,60 @@
                 "psr-3"
             ],
             "time": "2012-12-21 11:40:51"
+        },
+        {
+            "name": "sentry/sentry",
+            "version": "0.15.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/getsentry/sentry-php.git",
+                "reference": "c1c1eff438bcdc9ebf9c604906c832471a7e3fa4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/getsentry/sentry-php/zipball/c1c1eff438bcdc9ebf9c604906c832471a7e3fa4",
+                "reference": "c1c1eff438bcdc9ebf9c604906c832471a7e3fa4",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "php": ">=5.2.4"
+            },
+            "require-dev": {
+                "fabpot/php-cs-fixer": "^1.8.0",
+                "phpunit/phpunit": "^4.6.6"
+            },
+            "bin": [
+                "bin/raven"
+            ],
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "0.15.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-0": {
+                    "Raven_": "lib/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "David Cramer",
+                    "email": "dcramer@gmail.com"
+                }
+            ],
+            "description": "A PHP client for Sentry (http://getsentry.com)",
+            "homepage": "http://getsentry.com",
+            "keywords": [
+                "log",
+                "logging"
+            ],
+            "time": "2016-04-29 10:46:58"
         },
         {
             "name": "symfony/console",
@@ -330,7 +422,9 @@
     "packages-dev": [],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {
+        "ashevchuk/base-logger": 20
+    },
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": [],
