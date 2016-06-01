@@ -2,33 +2,65 @@
 
 <?php
 
-// Looking for composer
-if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
-    $rootPath = realpath(__DIR__ . "/../");
-} elseif (file_exists(__DIR__ . '/../../../autoload.php')) {
-    $rootPath = realpath(__DIR__ . "/../../../../");
+// Loading composer autoload file
+if (file_exists(__DIR__ . "/../vendor/autoload.php")) {
+    require __DIR__ . "/../vendor/autoload.php";
+} elseif (file_exists(__DIR__ . "/../../../autoload.php")) {
+    require __DIR__ . "/../../../autoload.php";
 } else {
-    echo "Composer autoloader not found\n\n";
-    exit(1);
+    throw new LogicException("Can`t find composer autoload file");
 }
 
-// Loading autoloader
-require $rootPath . "/vendor/autoload.php";
+// Detecting base path
+$baseDir = null;
+$filesList = get_included_files();
+foreach ($filesList as $elm) {
+    if (mb_strrpos($elm, "vendor/autoload.php") !== false) {
+        $baseDir = realpath(dirname($elm) . "/../");
+        break;
+    }
+}
+if (is_null($baseDir)) {
+    throw new LogicException("Can`t detect base dir");
+}
 
+// Init
+use BaseLogger\Lib\Component\LoggerDispatcher;
 use DbMigrations\Command\Create;
 use DbMigrations\Command\Init;
 use DbMigrations\Command\Status;
+use DbMigrations\Model\Config;
 use Symfony\Component\Console\Application;
+use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Yaml\Yaml;
 
+// Get configs
+$filesystem = new Filesystem();
+$yaml = new Yaml();
+$configPath = $baseDir . "/config/db-migration.yml";
+if ($filesystem->exists($configPath) === false) {
+    throw new LogicException(
+        "Can`t find config file. Create it in path `{$configPath}`` via example in project root."
+    );
+}
+$config = new Config($yaml->parse(file_get_contents($configPath)));
+
+// Init PDO
 $pdo = new \PDO(
-    "mysql:host=127.0.0.1;dbname=project-x;charset=utf8",
-    "project-x",
-    "project-x"
+    "mysql:host=" . $config->getMysqlHost() . ";port=" . $config->getMysqlPort()
+        . ";charset=" . $config->getMysqlCharset() . ";dbname=" . $config->getMysqlDatabase(),
+    $config->getMysqlUsername(),
+    $config->getMysqlPassword()
 );
-$path = "schema";
 
+// Init logger
+$eos = new \BaseLogger\Module\Logger\EosLogger("127.0.0.1", "psp", "pspdreamteam");
+$logger = new LoggerDispatcher();
+$logger->addLogger("eos", $eos);
+
+// Init commands
 $application = new Application();
-$application->add(new Create($pdo, $path));
-$application->add(new Init($pdo, $path));
-$application->add(new Status($pdo, $path));
+$application->add(new Create($pdo, $config->getGeneralSchemaPath(), $logger));
+$application->add(new Init($pdo, $config->getGeneralSchemaPath(), $logger));
+$application->add(new Status($pdo, $config->getGeneralSchemaPath(), $logger));
 $application->run();

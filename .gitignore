@@ -5,3 +5,5 @@
 vendor/
 
 ### Project ignores ###
+config/db-migration.yml
+schema/
