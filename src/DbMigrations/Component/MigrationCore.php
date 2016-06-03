@@ -413,6 +413,8 @@ class MigrationCore
             }
         }
 
+        $this->createFolderIfNotExist($this->schemaFolderPath);
+
         $result = [];
         $schemaTableList = [];
         $dbTableList = $this->getTableListFromDb();
