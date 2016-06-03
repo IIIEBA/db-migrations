@@ -420,6 +420,10 @@ class MigrationCore
         foreach ($schemaFilesList as $elmPath) {
             // Prepare some data
             $tableName = $this->getTableNameFromSchemaPath($elmPath);
+            if (!is_null($name) && $tableName !== $name) {
+                continue;
+            }
+
             $schemaTableList[] = $tableName;
             $schemaSyntax = rtrim(trim(file_get_contents($elmPath)), ";") . ";";
             $schemaParts = explode("\n", $schemaSyntax);
@@ -429,14 +433,14 @@ class MigrationCore
 
             // Check table fields if table exist in db
             if (!is_null($dbSyntax)) {
-                $newFields = array_diff($schemaParts, $dbParts);
+                $newFields = array_udiff($schemaParts, $dbParts, [$this, "matchFields"]);
                 foreach ($newFields as $field) {
                     $tableInfo->addChanges(
                         new TableChanges($field, new TableChangesAction(TableChangesAction::ADD))
                     );
                 }
 
-                $removedFields = array_diff($dbParts, $schemaParts);
+                $removedFields = array_udiff($dbParts, $schemaParts, [$this, "matchFields"]);
                 foreach ($removedFields as $field) {
                     $tableInfo->addChanges(
                         new TableChanges($field, new TableChangesAction(TableChangesAction::REMOVE))
@@ -448,8 +452,12 @@ class MigrationCore
         }
 
         // Build removed tables info
-        $removedTables = array_diff($dbTableList, $schemaTableList);
+        $removedTables = array_udiff($dbTableList, $schemaTableList, [$this, "matchFields"]);
         foreach ($removedTables as $tableName) {
+            if (!is_null($name) && $tableName !== $name) {
+                continue;
+            }
+
             $result[$tableName] = new TableInfo($tableName, null, $this->getCreateSyntaxForTable($tableName));
         }
 
@@ -500,6 +508,23 @@ class MigrationCore
         $this->logger->info("Table name was successfully detected - {name}", ["object" => $this, "name" => $name]);
 
         return $name;
+    }
+
+    /**
+     * Compare left and right
+     *
+     * @param mixed $left
+     * @param mixed $right
+     * @return int
+     */
+    public function matchFields($left, $right)
+    {
+        $left = rtrim(trim($left), ",");
+        if (empty($left)) {
+            return 0;
+        }
+        
+        return strcasecmp($left, rtrim(trim($right), ","));
     }
 
     /**
