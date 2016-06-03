@@ -32,10 +32,7 @@ class TableChanges implements TableChangesInterface
         if (!is_string($field)) {
             throw new NotStringException("field");
         }
-        if ($field === "") {
-            throw new EmptyStringException("field");
-        }
-        
+
         $this->field = trim(rtrim($field, ","));
         $this->action = $action;
     }

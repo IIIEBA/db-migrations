@@ -421,7 +421,7 @@ class MigrationCore
             // Prepare some data
             $tableName = $this->getTableNameFromSchemaPath($elmPath);
             $schemaTableList[] = $tableName;
-            $schemaSyntax = trim(file_get_contents($elmPath));
+            $schemaSyntax = rtrim(trim(file_get_contents($elmPath)), ";") . ";";
             $schemaParts = explode("\n", $schemaSyntax);
             $dbSyntax = $this->getCreateSyntaxForTable($tableName);
             $dbParts = explode("\n", $this->getCreateSyntaxForTable($tableName));
