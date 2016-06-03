@@ -10,7 +10,12 @@ use DbMigrations\Model\InitDbResultInterface;
 use DbMigrations\Model\InitTableResult;
 use DbMigrations\Model\InitTableResultInterface;
 use DbMigrations\Model\InitTableStatus;
+use DbMigrations\Model\TableChangesAction;
+use DbMigrations\Model\TableInfo;
+use DbMigrations\Model\TableChanges;
+use DbMigrations\Model\TableInfoInterface;
 use DbMigrations\Util\PathInfo;
+use PDO;
 use PDOException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -329,12 +334,24 @@ class MigrationCore
 
         // Create table
         try {
-            $this->pdo->exec("DROP TABLE IF EXISTS `{$tableName}`");
-            $this->pdo->exec($schemaContent);
-
+            // Drop old table
+            $sql = "DROP TABLE IF EXISTS `{$tableName}`";
+            $dropTable = $this->pdo->exec($sql);
             $this->logger->debug(
-                "Table {tableName} was successfully created",
-                ["object" => $this, "tableName" => $tableName]
+                "Trying to drop table {tableName}",
+                ["object" => $this, "tableName" => $tableName, "sql" => $sql, "result" => boolval($dropTable)]
+            );
+
+            // Create new table
+            $createTable = $this->pdo->exec($schemaContent);
+            $this->logger->debug(
+                "Trying to create table {tableName}",
+                [
+                    "object" => $this,
+                    "tableName" => $tableName,
+                    "sql" => $schemaContent,
+                    "result" => boolval($createTable)
+                ]
             );
         } catch (PDOException $error) {
             $msg = "Can`t create table `{$tableName}` from schema `{$schemaName}`";
@@ -380,11 +397,66 @@ class MigrationCore
         );
     }
 
-    public function tablesStatus(
-        $name = null,
-        $diff = false
-    ) {
+    /**
+     * Get tables status with info about modifications and create syntax
+     *
+     * @param string|null $name
+     * @return TableInfoInterface[]
+     */
+    public function tablesStatus($name = null) {
+        if (!is_null($name)) {
+            if (!is_string($name)) {
+                throw new NotStringException("name");
+            }
+            if ($name === "") {
+                throw new EmptyStringException("name");
+            }
+        }
 
+        $result = [];
+        $schemaTableList = [];
+        $dbTableList = $this->getTableListFromDb();
+        $schemaFilesList = $this->getSqlFilesByPath($this->schemaFolderPath);
+        foreach ($schemaFilesList as $elmPath) {
+            // Prepare some data
+            $tableName = $this->getTableNameFromSchemaPath($elmPath);
+            $schemaTableList[] = $tableName;
+            $schemaSyntax = trim(file_get_contents($elmPath));
+            $schemaParts = explode("\n", $schemaSyntax);
+            $dbSyntax = $this->getCreateSyntaxForTable($tableName);
+            $dbParts = explode("\n", $this->getCreateSyntaxForTable($tableName));
+            $tableInfo = new TableInfo($tableName, $schemaSyntax, $dbSyntax);
+
+            // Check table fields if table exist in db
+            if (!is_null($dbSyntax)) {
+                $newFields = array_diff($schemaParts, $dbParts);
+                foreach ($newFields as $field) {
+                    $tableInfo->addChanges(
+                        new TableChanges($field, new TableChangesAction(TableChangesAction::ADD))
+                    );
+                }
+
+                $removedFields = array_diff($dbParts, $schemaParts);
+                foreach ($removedFields as $field) {
+                    $tableInfo->addChanges(
+                        new TableChanges($field, new TableChangesAction(TableChangesAction::REMOVE))
+                    );
+                }
+            }
+
+            $result[$tableName] = $tableInfo;
+        }
+
+        // Build removed tables info
+        $removedTables = array_diff($dbTableList, $schemaTableList);
+        foreach ($removedTables as $tableName) {
+            $result[$tableName] = new TableInfo($tableName, null, $this->getCreateSyntaxForTable($tableName));
+        }
+
+        // Sort tables by alphabetic
+        asort($result);
+
+        return (!is_null($name) && array_key_exists($name, $result)) ? [$result[$name]] : array_values($result);
     }
 
     /**
@@ -428,6 +500,72 @@ class MigrationCore
         $this->logger->info("Table name was successfully detected - {name}", ["object" => $this, "name" => $name]);
 
         return $name;
+    }
+
+    /**
+     * Get create table syntax
+     *
+     * @param string $tableName
+     * @return string|null
+     */
+    public function getCreateSyntaxForTable($tableName)
+    {
+        if (!is_string($tableName)) {
+            throw new NotStringException("tableName");
+        }
+        if ($tableName === "") {
+            throw new EmptyStringException("tableName");
+        }
+
+        if (!$this->isTableExists($tableName)) {
+            return null;
+        }
+
+        $sql = "SHOW CREATE TABLE `{$tableName}`";
+        $createSyntax = $this->pdo->query($sql)->fetchColumn(1) . ";";
+        $this->logger->debug(
+            "Trying to get create syntax of table {tableName}",
+            ["object" => $this, "tableName" => $tableName, "sql" => $sql, "result" => !empty($createSyntax)]
+        );
+
+        return !empty($createSyntax) ? trim(preg_replace("~AUTO_INCREMENT=\\d+\\s*~i", "", $createSyntax, 1)) : null;
+    }
+
+    /**
+     * Check is table exists in db
+     *
+     * @param string $tableName
+     * @return bool
+     */
+    public function isTableExists($tableName)
+    {
+        if (!is_string($tableName)) {
+            throw new NotStringException("tableName");
+        }
+        if ($tableName === "") {
+            throw new EmptyStringException("tableName");
+        }
+
+        $sql = "SHOW TABLES LIKE '{$tableName}'";
+        $result = $this->pdo->query($sql)->rowCount();
+        $this->logger->debug(
+            "Trying to find table {tableName} into db",
+            ["object" => $this, "tableName" => $tableName, "sql" => $sql, "count" => $result]
+        );
+
+        return boolval($result);
+    }
+
+    public function getTableListFromDb()
+    {
+        $sql = "SHOW TABLES";
+        $result = $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN, 0);
+        $this->logger->debug(
+            "Trying to get table list from db",
+            ["object" => $this, "sql" => $sql, "count" => count($result)]
+        );
+
+        return $result;
     }
 
     /**

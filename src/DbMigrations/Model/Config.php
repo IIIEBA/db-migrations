@@ -53,14 +53,6 @@ class Config
     {
         $this->data = $data;
 
-        if (array_key_exists("mysql", $data) === false || !is_array($data["mysql"])) {
-            throw new NotArrayException("mysql in data");
-        }
-
-        if (array_key_exists("general", $data) === false || !is_array($data["general"])) {
-            throw new NotArrayException("general in data");
-        }
-
         // Mysql configs
         $this->mysqlHost = $this->get("host", "mysql", "127.0.0.1");
         $this->mysqlPort = $this->get("port", "mysql", 3306);
