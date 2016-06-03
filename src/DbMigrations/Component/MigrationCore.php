@@ -583,6 +583,11 @@ class MigrationCore
         return boolval($result);
     }
 
+    /**
+     * Get list of all tables in db
+     *
+     * @return string[]
+     */
     public function getTableListFromDb()
     {
         $sql = "SHOW TABLES";
