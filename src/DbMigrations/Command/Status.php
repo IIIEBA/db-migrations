@@ -91,7 +91,7 @@ class Status extends AbstractCommand
      */
     public function showModifiedFields(TableInfoInterface $table, OutputInterface $output)
     {
-        if ($output->isVerbose() && $table->getStatus()->getValue() === TableInfoStatus::MODIFIED) {
+        if ($output->isVerbose() && $table->getStatus()->isEquals(TableInfoStatus::MODIFIED)) {
             foreach ($table->getChanges() as $changes) {
                 switch ($changes->getAction()->getValue()) {
                     case TableChangesAction::ADD:

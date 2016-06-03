@@ -27,6 +27,7 @@ if (is_null($baseDir)) {
 use BaseLogger\Lib\Component\LoggerDispatcher;
 use DbMigrations\Command\Create;
 use DbMigrations\Command\Init;
+use DbMigrations\Command\Migrate;
 use DbMigrations\Command\Status;
 use DbMigrations\Model\Config;
 use Symfony\Component\Console\Application;
@@ -62,4 +63,5 @@ $application = new Application();
 $application->add(new Create($pdo, $config->getGeneralSchemaPath(), $logger));
 $application->add(new Init($pdo, $config->getGeneralSchemaPath(), $logger));
 $application->add(new Status($pdo, $config->getGeneralSchemaPath(), $logger));
+$application->add(new Migrate($pdo, $config->getGeneralSchemaPath(), $logger));
 $application->run();

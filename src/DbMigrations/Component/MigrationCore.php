@@ -10,6 +10,9 @@ use DbMigrations\Model\InitDbResultInterface;
 use DbMigrations\Model\InitTableResult;
 use DbMigrations\Model\InitTableResultInterface;
 use DbMigrations\Model\InitTableStatus;
+use DbMigrations\Model\Migration;
+use DbMigrations\Model\MigrationInterface;
+use DbMigrations\Model\MigrationStatus;
 use DbMigrations\Model\TableChangesAction;
 use DbMigrations\Model\TableInfo;
 use DbMigrations\Model\TableChanges;
@@ -49,6 +52,10 @@ class MigrationCore
      * @var Filesystem
      */
     private $filesystem;
+    /**
+     * @var MigrationBuilder
+     */
+    private $migrationBuilder;
 
     /**
      * MigrationCore constructor.
@@ -77,6 +84,10 @@ class MigrationCore
         $this->schemaFolderPath = $this->detectPath($schemaFolderPath);
 
         $this->filesystem = new Filesystem();
+        $this->migrationBuilder = new MigrationBuilder(
+            $pdo,
+            $this->schemaFolderPath . "/" . self::MIGRATIONS_FOLDER_NAME
+        );
 
         $this->logger->info("MigrationCore was successfully initialized", ["object" => $this]);
     }
@@ -151,6 +162,18 @@ class MigrationCore
         return $generatedName;
     }
 
+    /**
+     * Get list of migrations
+     *
+     * @param MigrationStatus|null $status
+     * @return MigrationInterface
+     */
+    public function getMigrationList(MigrationStatus $status = null)
+    {
+
+        return [];
+    }
+    
     /**
      * Init new db from schema files and add data to them from init folder if need
      *

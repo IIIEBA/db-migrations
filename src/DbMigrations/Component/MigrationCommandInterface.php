@@ -3,10 +3,10 @@
 namespace DbMigrations\Component;
 
 /**
- * Class MigrationInterface
+ * Class MigrationCommandInterface
  * @package DbMigrations\Component
  */
-interface MigrationInterface
+interface MigrationCommandInterface
 {
     /**
      * Run migration

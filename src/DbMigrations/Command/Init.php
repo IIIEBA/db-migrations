@@ -72,7 +72,7 @@ class Init extends AbstractCommand
 
         foreach ($migrationsList->getResult() as $name => $result) {
             $output->writeln("<info>$name - " . $result->getStatus()->getValue() . "</info>");
-            if ($output->isVerbose() && $result->getStatus()->getValue() === InitTableStatus::ERROR) {
+            if ($output->isVerbose() && $result->getStatus()->isEquals(InitTableStatus::ERROR)) {
                 $output->writeln("<error>" . $result->getDesc() . "</error>");
             }
         }
