@@ -264,6 +264,10 @@ class SchemaComponent implements SchemaComponentInterface
                 continue;
             }
 
+            // Sort tables
+            sort($tableList);
+            $tableList = array_values($tableList);
+
             // Check db status
             $modified = false;
             foreach ($tableList as $elm) {
