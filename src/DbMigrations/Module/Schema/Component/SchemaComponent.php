@@ -153,17 +153,17 @@ class SchemaComponent implements SchemaComponentInterface
 
     public function initDb(): void
     {
-
+        // TODO
     }
 
     public function migrate(): void
     {
-
+        // TODO
     }
 
     public function dumpDb(string $database = null, string $tableName = null): void
     {
-
+        // TODO
     }
 
     /**
@@ -264,10 +264,6 @@ class SchemaComponent implements SchemaComponentInterface
                 continue;
             }
 
-            // Sort tables
-            sort($tableList);
-            $tableList = array_values($tableList);
-
             // Check db status
             $modified = false;
             foreach ($tableList as $elm) {
@@ -277,9 +273,10 @@ class SchemaComponent implements SchemaComponentInterface
                 }
             }
 
+            sort($tableList);
             $dbList[] = new DatabaseInfo(
                 $db->getName(),
-                $tableList,
+                array_values($tableList),
                 $dbExists
                     ? ($modified ? new DbInfoStatus(DbInfoStatus::MODIFIED) :new DbInfoStatus(DbInfoStatus::ACTUAL))
                     : new DbInfoStatus(DbInfoStatus::CREATED)
