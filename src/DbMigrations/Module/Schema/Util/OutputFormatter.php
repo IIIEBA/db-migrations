@@ -56,17 +56,17 @@ class OutputFormatter
     {
         switch ($table->getStatus()->getValue()) {
             case DbInfoStatus::MODIFIED:
-                $prefix = "<comment>  ? ";
+                $prefix = "<comment>  {$table->getStatus()->getValue()} ";
                 $suffix = "</comment>";
                 break;
 
             case DbInfoStatus::CREATED:
-                $prefix = "<info>  + ";
+                $prefix = "<info>  {$table->getStatus()->getValue()} ";
                 $suffix = "</info>";
                 break;
 
             case DbInfoStatus::REMOVED:
-                $prefix = "<fg=red>  - ";
+                $prefix = "<fg=red>  {$table->getStatus()->getValue()} ";
                 $suffix = "</>";
                 break;
 
@@ -91,13 +91,18 @@ class OutputFormatter
             foreach ($table->getChanges() as $changes) {
                 switch ($changes->getAction()->getValue()) {
                     case TableChangesAction::ADD:
-                        $prefix = "<info>  + ";
+                        $prefix = "<info>  {$changes->getAction()->getValue()} ";
                         $suffix = "</info>";
                         break;
 
                     case TableChangesAction::REMOVE:
-                        $prefix = "<fg=red>  - ";
+                        $prefix = "<fg=red>  {$changes->getAction()->getValue()} ";
                         $suffix = "</>";
+                        break;
+
+                    case TableChangesAction::MODIFIED:
+                        $prefix = "<comment>  {$changes->getAction()->getValue()} ";
+                        $suffix = "</comment>";
                         break;
 
                     default:

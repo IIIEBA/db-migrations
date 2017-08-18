@@ -12,6 +12,7 @@ use DbMigrations\Kernel\Util\LoggerTrait;
 use DbMigrations\Kernel\Util\StdInHelper;
 use DbMigrations\Module\Schema\Enum\TableChangesAction;
 use DbMigrations\Module\Schema\Enum\DbInfoStatus;
+use DbMigrations\Module\Schema\Enum\TableRowType;
 use DbMigrations\Module\Schema\Model\Database;
 use DbMigrations\Module\Schema\Model\DatabaseInfo;
 use DbMigrations\Module\Schema\Model\DatabaseInfoInterface;
@@ -19,6 +20,9 @@ use DbMigrations\Module\Schema\Model\DatabaseInterface;
 use DbMigrations\Module\Schema\Model\Table;
 use DbMigrations\Module\Schema\Model\TableChanges;
 use DbMigrations\Module\Schema\Model\TableInfo;
+use DbMigrations\Module\Schema\Model\TableInfoInterface;
+use DbMigrations\Module\Schema\Model\TableRow;
+use DbMigrations\Module\Schema\Model\TableRowInterface;
 use DbMigrations\Module\Schema\Util\OutputFormatter;
 use PDO;
 use Psr\Log\LoggerInterface;
@@ -209,7 +213,6 @@ class SchemaComponent implements SchemaComponentInterface
                 }
 
                 // Set some variables
-                $schemaParts = explode("\n", $schema->getSchema());
                 $dbSchema = $this->getCreateSyntaxForTable($db->getName(), $schema->getName());
                 $tableInfo = new TableInfo(
                     $schema->getName(),
@@ -217,23 +220,7 @@ class SchemaComponent implements SchemaComponentInterface
                     $dbSchema
                 );
 
-                // Check table fields if table exist in db
-                if (!is_null($dbSchema)) {
-                    $dbParts = explode("\n", $dbSchema);
-                    $newFields = array_udiff($schemaParts, $dbParts, [$this, "matchFields"]);
-                    foreach ($newFields as $field) {
-                        $tableInfo->addChanges(
-                            new TableChanges($field, new TableChangesAction(TableChangesAction::ADD))
-                        );
-                    }
-
-                    $removedFields = array_udiff($dbParts, $schemaParts, [$this, "matchFields"]);
-                    foreach ($removedFields as $field) {
-                        $tableInfo->addChanges(
-                            new TableChanges($field, new TableChangesAction(TableChangesAction::REMOVE))
-                        );
-                    }
-                }
+                $this->checkSchemaDiff($schema->getSchema(), $tableInfo, $dbSchema);
 
                 $tableList[$schema->getName()] = $tableInfo;
             }
@@ -303,6 +290,88 @@ class SchemaComponent implements SchemaComponentInterface
         }
 
         return $dbList;
+    }
+
+    public function checkSchemaDiff(
+        string $localSchema,
+        TableInfoInterface $tableInfo,
+        string $dbSchema = null
+    ) {
+        // Check table fields if table exist in db
+        if (!is_null($dbSchema)) {
+            $localSchemaParts = explode("\n", $localSchema);
+            $dbSchemaParts = explode("\n", $dbSchema);
+
+            // Build difference
+            $newRows = array_udiff($localSchemaParts, $dbSchemaParts, [$this, "matchFields"]);
+            $removedRows = array_udiff($dbSchemaParts, $localSchemaParts, [$this, "matchFields"]);
+
+            // Parse rows
+            /**
+             * @var TableRowInterface[] $newParsedRows
+             * @var TableRowInterface[] $removedParsedRows
+             */
+            $newParsedRows = [];
+            $removedParsedRows = [];
+            foreach ($newRows as $row) {
+                $parsed = $this->parseSchemaRow($row);
+                $key = $parsed->getType()->getValue() . "_" . $parsed->getName();
+                $newParsedRows[$key] = $parsed;
+            }
+            foreach ($removedRows as $row) {
+                $parsed = $this->parseSchemaRow($row);
+                $key = $parsed->getType()->getValue() . "_" . $parsed->getName();
+                $removedParsedRows[$key] = $parsed;
+            }
+
+            // Check difference
+            foreach ($newParsedRows as $key => $row) {
+                if (array_key_exists($key, $removedParsedRows)) {
+                    $tableInfo->addChanges(
+                        new TableChanges($row->getRow(), new TableChangesAction(TableChangesAction::MODIFIED))
+                    );
+
+                    unset($removedParsedRows[$key]);
+                } else {
+                    $tableInfo->addChanges(
+                        new TableChanges($row->getRow(), new TableChangesAction(TableChangesAction::ADD))
+                    );
+                }
+            }
+            foreach ($removedParsedRows as $row) {
+                $tableInfo->addChanges(
+                    new TableChanges($row->getRow(), new TableChangesAction(TableChangesAction::REMOVE))
+                );
+            }
+        }
+    }
+
+    /**
+     * Parse schema row object with type
+     *
+     * @param string $row
+     * @return TableRowInterface
+     */
+    public function parseSchemaRow(string $row)
+    {
+        $row = rtrim(trim($row), ",");
+
+        switch (true) {
+            // Column
+            case preg_match("/^\s*(\`(.+)\`\s.+)$/", $row, $matches):
+                $result = new TableRow($matches[1], new TableRowType(TableRowType::COLUMN), $matches[2]);
+                break;
+
+            // Index
+            case preg_match("/^\s*(.*KEY\s\(?\`([^\`\)]+)\`\)?.*)$/", $row, $matches):
+                $result = new TableRow($matches[1], new TableRowType(TableRowType::KEY), $matches[2]);
+                break;
+
+            default:
+                $result = new TableRow($row, new TableRowType(TableRowType::KEY));
+        }
+
+        return $result;
     }
 
     /**

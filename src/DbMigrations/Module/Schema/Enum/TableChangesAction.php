@@ -14,4 +14,5 @@ class TableChangesAction extends Enum
 {
     const ADD = "+";
     const REMOVE = "-";
+    const MODIFIED = "?";
 }
