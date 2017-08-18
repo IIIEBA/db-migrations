@@ -238,6 +238,7 @@ class SchemaComponent implements SchemaComponentInterface
                 $tableList[$schema->getName()] = $tableInfo;
             }
 
+            // Parse removed tables
             $removedTables = array_udiff($dbTableNames, $schemaTableNames, [$this, "matchFields"]);
             foreach ($removedTables as $name) {
                 // Skip table if not match requested name
@@ -281,10 +282,21 @@ class SchemaComponent implements SchemaComponentInterface
             );
         }
 
+        // Check db not from schema file
         if ($database !== null && $dbFound === false) {
+            $tableList = [];
+            $tableNames = $this->getTableListFromDb($database);
+            foreach ($tableNames as $name) {
+                $tableList[] = new TableInfo(
+                    $name,
+                    null,
+                    $this->getCreateSyntaxForTable($database, $name)
+                );
+            }
+
             $dbList[] = new DatabaseInfo(
                 $database,
-                [],
+                $tableList,
                 new DbInfoStatus(DbInfoStatus::REMOVED)
             );
         }
