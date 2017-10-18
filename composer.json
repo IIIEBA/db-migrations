@@ -10,20 +10,19 @@
   ],
   "minimum-stability": "stable",
   "autoload": {
-    "psr-0": {
-      "": "src"
+    "psr-4": {
+      "DbMigrations\\": "src/DbMigrations"
     }
   },
   "bin": [
-    "bin/db-migration"
+    "bin/db"
   ],
   "require": {
-    "ashevchuk/base-exceptions": "^0.1.3",
-    "ashevchuk/enum": "^0.1.3",
-    "symfony/console": "^3.0",
-    "symfony/filesystem": "^3.0",
-    "symfony/yaml": "^3.0",
-    "psr/log": "^1.0",
-    "ashevchuk/base-logger": "dev-master"
+    "ashevchuk/base-exceptions": "*",
+    "ashevchuk/enum": "1.0.1",
+    "symfony/console": "*",
+    "symfony/filesystem": "*",
+    "symfony/yaml": "*",
+    "psr/log": "*"
   }
 }

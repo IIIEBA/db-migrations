@@ -1,0 +1,17 @@
+#!/usr/bin/env php
+<?php
+
+if (!defined("PROJECT_ROOT")) {
+    $projectRootSeparator = strpos(__DIR__, "/vendor/") !== false ? "/vendor/" : "/bin";
+    define("PROJECT_ROOT", mb_substr(__DIR__, 0, mb_strpos(__DIR__, $projectRootSeparator)) . "/");
+}
+
+// Loading composer autoload file
+if (file_exists(PROJECT_ROOT . "vendor/autoload.php")) {
+    require PROJECT_ROOT . "vendor/autoload.php";
+} else {
+    throw new LogicException("Can`t find composer autoload file");
+}
+
+$bootstrap = new \DbMigrations\Kernel\Component\Bootstrap();
+$bootstrap->init();
