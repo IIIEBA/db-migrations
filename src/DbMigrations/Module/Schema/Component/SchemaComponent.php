@@ -118,7 +118,7 @@ class SchemaComponent implements SchemaComponentInterface
             switch (true) {
                 case $db->getStatus()->isEquals(DbInfoStatus::ACTUAL):
                     $this->output->writeln(
-                        PHP_EOL . "<bg=yellow;fg=black> --- Database '{$db->getName()}' is actual --- </>"
+                        PHP_EOL . "<bg=white;fg=black> --- Database '{$db->getName()}' is actual --- </>"
                     );
 
                     break;
@@ -152,7 +152,7 @@ class SchemaComponent implements SchemaComponentInterface
             }
 
             foreach ($db->getTableList() as $table) {
-                $this->outputFormatter->showTableName($table);
+                $this->outputFormatter->showTableNameForStatus($table);
                 $this->outputFormatter->showModifiedFields($table);
                 $this->outputFormatter->showCreateTableSyntax($table);
             }
@@ -179,7 +179,7 @@ class SchemaComponent implements SchemaComponentInterface
             switch (true) {
                 case $db->getStatus()->isEquals(DbInfoStatus::ACTUAL):
                     $this->output->writeln(
-                        PHP_EOL . "<bg=yellow;fg=black> --- Database '{$db->getName()}' is actual --- </>"
+                        PHP_EOL . "<bg=white;fg=black> --- Database '{$db->getName()}' is actual --- </>"
                     );
 
                     continue;
@@ -221,29 +221,42 @@ class SchemaComponent implements SchemaComponentInterface
             foreach ($db->getTableList() as $table) {
                 switch (true) {
                     case $table->getStatus()->isEquals(DbInfoStatus::ACTUAL):
-                        $this->output->writeln(
-                            "Table '{$table->getTableName()}'is equal"
+                        $this->outputFormatter->showTableName(
+                            $table->getTableName(),
+                            "is equal",
+                            $table->getStatus()
                         );
+                        $this->outputFormatter->showCreateTableSyntax($table, true);
+
                         break;
 
                     case $table->getStatus()->isEquals(DbInfoStatus::MODIFIED):
                         $status = $this->stdInHelper->confirm(
                             "Table '{$table->getTableName()}' was modified, recreate it?"
                         );
+
                         if ($status) {
                             $this->createTable($db->getName(), $table->getSchemaSyntax(), true);
-                            $this->output->writeln(
-                                "Table '{$table->getTableName()}' was successfully recreated"
+
+                            $this->outputFormatter->showTableName(
+                                $table->getTableName(),
+                                "was successfully recreated",
+                                $table->getStatus()
                             );
                         }
+                        $this->outputFormatter->showCreateTableSyntax($table, true);
 
                         break;
 
                     case $table->getStatus()->isEquals(DbInfoStatus::CREATED):
-                        $this->createTable($table->getTableName(), $table->getSchemaSyntax());
-                        $this->output->writeln(
-                            "Table '{$table->getTableName()}' was successfully created"
+                        $this->createTable($db->getName(), $table->getSchemaSyntax());
+
+                        $this->outputFormatter->showTableName(
+                            $table->getTableName(),
+                            "was successfully recreated",
+                            $table->getStatus()
                         );
+                        $this->outputFormatter->showCreateTableSyntax($table, true);
 
                         break;
 
@@ -254,15 +267,21 @@ class SchemaComponent implements SchemaComponentInterface
 
                         if ($status) {
                             $this->deleteTable($db->getName(), $table->getTableName());
-                            $this->output->writeln(
-                                "Table '{$table->getTableName()}' was successfully removed"
+
+                            $this->outputFormatter->showTableName(
+                                $table->getTableName(),
+                                "was successfully removed",
+                                $table->getStatus()
                             );
+                            $this->outputFormatter->showCreateTableSyntax($table, true);
                         }
 
                         break;
                 }
             }
         }
+
+        $this->output->writeln("");
     }
 
     public function migrate(): void
@@ -270,6 +289,13 @@ class SchemaComponent implements SchemaComponentInterface
         // TODO
     }
 
+    /**
+     * Dump database to schema files
+     *
+     * @param string|null $database
+     * @param string|null $tableName
+     * @throws GeneralException
+     */
     public function dumpDb(string $database = null, string $tableName = null): void
     {
         $dbList = $database !== null ? [$database] :$this->dbConnection->getConnectionNamesList();
@@ -282,7 +308,7 @@ class SchemaComponent implements SchemaComponentInterface
             switch (true) {
                 case $db->getStatus()->isEquals(DbInfoStatus::ACTUAL):
                     $this->output->writeln(
-                        PHP_EOL . "<bg=yellow;fg=black> --- Database '{$db->getName()}' is actual --- </>"
+                        PHP_EOL . "<bg=white;fg=black> --- Database '{$db->getName()}' is actual --- </>"
                     );
 
                     continue;
@@ -300,24 +326,27 @@ class SchemaComponent implements SchemaComponentInterface
                         . "<bg=red;fg=white> --- Database '{$db->getName()}' was not found --- </>"
                     );
 
-                    break;
+                    continue;
 
                 case $db->getStatus()->isEquals(DbInfoStatus::REMOVED):
-                    $this->deleteDatabase($db->getName());
                     $this->output->writeln(
                         PHP_EOL .
                         "<bg=yellow;fg=black> --- Database '{$db->getName()}' is missing in schema, dumping it --- </>"
                     );
 
-                    continue;
+                    break;
             }
 
             foreach ($db->getTableList() as $table) {
                 switch (true) {
                     case $table->getStatus()->isEquals(DbInfoStatus::ACTUAL):
-                        $this->output->writeln(
-                            "Table '{$table->getTableName()}'is equal"
+                        $this->outputFormatter->showTableName(
+                            $table->getTableName(),
+                            "is equal",
+                            $table->getStatus()
                         );
+                        $this->outputFormatter->showCreateTableSyntax($table, true);
+
                         break;
 
                     case $table->getStatus()->isEquals(DbInfoStatus::MODIFIED):
@@ -326,9 +355,13 @@ class SchemaComponent implements SchemaComponentInterface
                         );
                         if ($status) {
                             $this->createSchema($db->getName(), $table->getTableName(), $table->getDbSyntax());
-                            $this->output->writeln(
-                                "Schema '{$table->getTableName()}' was successfully recreated"
+
+                            $this->outputFormatter->showTableName(
+                                $table->getTableName(),
+                                "was successfully recreated",
+                                $table->getStatus()
                             );
+                            $this->outputFormatter->showCreateTableSyntax($table, true);
                         }
 
                         break;
@@ -340,9 +373,13 @@ class SchemaComponent implements SchemaComponentInterface
                         );
                         if ($status) {
                             $this->deleteSchema($db->getName(), $table->getTableName());
-                            $this->output->writeln(
-                                "Schema '{$table->getTableName()}' was successfully removed"
+
+                            $this->outputFormatter->showTableName(
+                                $table->getTableName(),
+                                "was successfully removed",
+                                new DbInfoStatus(DbInfoStatus::REMOVED)
                             );
+                            $this->outputFormatter->showCreateTableSyntax($table, true);
                         }
 
                         break;
@@ -350,14 +387,20 @@ class SchemaComponent implements SchemaComponentInterface
                     // Table is created in db but missing schema file
                     case $table->getStatus()->isEquals(DbInfoStatus::REMOVED):
                         $this->createSchema($db->getName(), $table->getTableName(), $table->getDbSyntax());
-                        $this->output->writeln(
-                            "Schema '{$table->getTableName()}' was successfully created"
+
+                        $this->outputFormatter->showTableName(
+                            $table->getTableName(),
+                            "was successfully created",
+                            new DbInfoStatus(DbInfoStatus::CREATED)
                         );
+                        $this->outputFormatter->showCreateTableSyntax($table, true);
 
                         break;
                 }
             }
         }
+
+        $this->output->writeln("");
     }
 
     /**

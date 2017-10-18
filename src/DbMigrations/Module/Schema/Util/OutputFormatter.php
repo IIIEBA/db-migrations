@@ -50,11 +50,16 @@ class OutputFormatter
     /**
      * Show information about table status
      *
-     * @param TableInfoInterface $table
+     * @param string $tableName
+     * @param string $msg
+     * @param DbInfoStatus|null $status
      */
-    public function showTableName(TableInfoInterface $table)
-    {
-        switch ($table->getStatus()->getValue()) {
+    public function showTableName(
+        string $tableName,
+        string $msg,
+        DbInfoStatus $status = null
+    ): void {
+        switch ($status->getValue()) {
             case DbInfoStatus::MODIFIED:
                 $prefix = "<comment>  ? ";
                 $suffix = "</comment>";
@@ -76,7 +81,21 @@ class OutputFormatter
         }
         $this->output->writeln(
             ($this->output->isVerbose() ? PHP_EOL : "")
-            . $prefix . "Table `" . $table->getTableName() . "` is " . $table->getStatus()->getValue() . $suffix
+            . $prefix . "Table `<comment>" . $tableName . "</comment>` {$msg} " . $suffix
+        );
+    }
+
+    /**
+     * Show information about table status
+     *
+     * @param TableInfoInterface $table
+     */
+    public function showTableNameForStatus(TableInfoInterface $table)
+    {
+        $this->showTableName(
+            $table->getTableName(),
+            "is {$table->getStatus()->getValue()}",
+            $table->getStatus()
         );
     }
 
@@ -119,13 +138,14 @@ class OutputFormatter
      * Show create table syntax
      *
      * @param TableInfoInterface $table
+     * @param bool $skipStatus
      */
-    public function showCreateTableSyntax(TableInfoInterface $table)
+    public function showCreateTableSyntax(TableInfoInterface $table, $skipStatus = false)
     {
         if ($this->output->isVeryVerbose()) {
             $prefix = "        ";
 
-            if ($table->getStatus()->isEquals(DbInfoStatus::ACTUAL)) {
+            if ($skipStatus || $table->getStatus()->isEquals(DbInfoStatus::ACTUAL)) {
                 $createSyntax = [
                     "Create table syntax:" => $table->getSchemaSyntax(),
                 ];
