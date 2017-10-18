@@ -56,17 +56,17 @@ class OutputFormatter
     {
         switch ($table->getStatus()->getValue()) {
             case DbInfoStatus::MODIFIED:
-                $prefix = "<comment>  {$table->getStatus()->getValue()} ";
+                $prefix = "<comment>  ? ";
                 $suffix = "</comment>";
                 break;
 
             case DbInfoStatus::CREATED:
-                $prefix = "<info>  {$table->getStatus()->getValue()} ";
+                $prefix = "<info>  + ";
                 $suffix = "</info>";
                 break;
 
             case DbInfoStatus::REMOVED:
-                $prefix = "<fg=red>  {$table->getStatus()->getValue()} ";
+                $prefix = "<fg=red>  - ";
                 $suffix = "</>";
                 break;
 

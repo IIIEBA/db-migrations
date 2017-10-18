@@ -65,6 +65,18 @@ class DbConnection implements DbConnectionInterface
         return $this->connectionList[self::DEFAULT_CONNECTION_NAME];
     }
 
+    /**
+     * Get list of configured connection names
+     *
+     * @return string[]
+     */
+    public function getConnectionNamesList(): array
+    {
+        $list = $this->connectionList;
+        unset($list[self::DEFAULT_CONNECTION_NAME]);
+
+        return array_keys($list);
+    }
 
     /**
      * @param string $name

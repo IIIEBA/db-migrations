@@ -38,6 +38,7 @@ class SchemaComponent implements SchemaComponentInterface
     use LoggerTrait;
 
     const SCHEMA_FOLDER = "schema";
+    const DEFAULT_FOLDER_PERMISSIONS = 0755;
 
     /**
      * @var GeneralConfigInterface
@@ -107,8 +108,10 @@ class SchemaComponent implements SchemaComponentInterface
      * @param string|null $tableName
      * @return void
      */
-    public function showStatus(string $database = null, string $tableName = null): void
-    {
+    public function showStatus(
+        string $database = null,
+        string $tableName = null
+    ): void {
         $status = $this->getDbStatus($database, $tableName);
 
         foreach ($status as $db) {
@@ -117,23 +120,26 @@ class SchemaComponent implements SchemaComponentInterface
                     $this->output->writeln(
                         PHP_EOL . "<bg=yellow;fg=black> --- Database '{$db->getName()}' is actual --- </>"
                     );
+
                     break;
 
                 case $db->getStatus()->isEquals(DbInfoStatus::MODIFIED):
                     $this->output->writeln(
                         PHP_EOL . "<bg=yellow;fg=black> --- Database '{$db->getName()}' is modified --- </>"
                     );
+
                     break;
 
                 case $db->getStatus()->isEquals(DbInfoStatus::CREATED):
                     $this->output->writeln(
                         PHP_EOL . "<bg=green;fg=black> --- Database '{$db->getName()}' is not created --- </>"
                     );
+
                     break;
 
                 case $db->getStatus()->isEquals(DbInfoStatus::REMOVED):
                     $this->output->writeln(
-                        PHP_EOL . "<error> --- Requested database '{$database}' was not found --- </error>"
+                        PHP_EOL . "<error> --- Requested database '{$db->getName()}' was not found --- </error>"
                     );
 
                     continue;
@@ -155,9 +161,108 @@ class SchemaComponent implements SchemaComponentInterface
         $this->output->writeln("");
     }
 
-    public function initDb(): void
-    {
-        // TODO
+    /**
+     * Init databases
+     *
+     * @param string|null $database
+     * @param string|null $tableName
+     * @param bool $withOutData
+     */
+    public function initDb(
+        string $database = null,
+        string $tableName = null,
+        bool $withOutData = false
+    ): void {
+        $status = $this->getDbStatus($database, $tableName);
+
+        foreach ($status as $db) {
+            switch (true) {
+                case $db->getStatus()->isEquals(DbInfoStatus::ACTUAL):
+                    $this->output->writeln(
+                        PHP_EOL . "<bg=yellow;fg=black> --- Database '{$db->getName()}' is actual --- </>"
+                    );
+
+                    continue;
+
+                case $db->getStatus()->isEquals(DbInfoStatus::MODIFIED):
+                    $this->output->writeln(
+                        PHP_EOL . "<bg=yellow;fg=black> --- Database '{$db->getName()}' is modified --- </>"
+                    );
+
+                    break;
+
+                case $db->getStatus()->isEquals(DbInfoStatus::CREATED):
+                    $this->createDatabase($db->getName());
+                    $this->output->writeln(
+                        PHP_EOL
+                        . "<bg=green;fg=black> --- Database '{$db->getName()}' was successfully created --- </>"
+                    );
+
+                    break;
+
+                case $db->getStatus()->isEquals(DbInfoStatus::REMOVED):
+                    $status = $this->stdInHelper->confirm(
+                        "Database '{$db->getName()}' was not found in schema, remove it?"
+                    );
+
+                    if ($status) {
+                        $this->deleteDatabase($db->getName());
+                        $this->output->writeln(
+                            PHP_EOL .
+                            "<bg=green;fg=black> --- Database '{$db->getName()}' was successfully deleted --- </>"
+                        );
+
+                        continue;
+                    }
+
+                    continue;
+            }
+
+            foreach ($db->getTableList() as $table) {
+                switch (true) {
+                    case $table->getStatus()->isEquals(DbInfoStatus::ACTUAL):
+                        $this->output->writeln(
+                            "Table '{$table->getTableName()}'is equal"
+                        );
+                        break;
+
+                    case $table->getStatus()->isEquals(DbInfoStatus::MODIFIED):
+                        $status = $this->stdInHelper->confirm(
+                            "Table '{$table->getTableName()}' was modified, recreate it?"
+                        );
+                        if ($status) {
+                            $this->createTable($db->getName(), $table->getSchemaSyntax(), true);
+                            $this->output->writeln(
+                                "Table '{$table->getTableName()}' was successfully recreated"
+                            );
+                        }
+
+                        break;
+
+                    case $table->getStatus()->isEquals(DbInfoStatus::CREATED):
+                        $this->createTable($table->getTableName(), $table->getSchemaSyntax());
+                        $this->output->writeln(
+                            "Table '{$table->getTableName()}' was successfully created"
+                        );
+
+                        break;
+
+                    case $table->getStatus()->isEquals(DbInfoStatus::REMOVED):
+                        $status = $this->stdInHelper->confirm(
+                            "Table '{$table->getTableName()}' was removed from schema, delete it?"
+                        );
+
+                        if ($status) {
+                            $this->deleteTable($db->getName(), $table->getTableName());
+                            $this->output->writeln(
+                                "Table '{$table->getTableName()}' was successfully removed"
+                            );
+                        }
+
+                        break;
+                }
+            }
+        }
     }
 
     public function migrate(): void
@@ -167,7 +272,92 @@ class SchemaComponent implements SchemaComponentInterface
 
     public function dumpDb(string $database = null, string $tableName = null): void
     {
-        // TODO
+        $dbList = $database !== null ? [$database] :$this->dbConnection->getConnectionNamesList();
+        if (empty($dbList)) {
+            throw new GeneralException("No databases was via connection names, try to select database manually");
+        }
+
+        foreach ($dbList as $dbName) {
+            list($db) = $this->getDbStatus($dbName, $tableName);
+            switch (true) {
+                case $db->getStatus()->isEquals(DbInfoStatus::ACTUAL):
+                    $this->output->writeln(
+                        PHP_EOL . "<bg=yellow;fg=black> --- Database '{$db->getName()}' is actual --- </>"
+                    );
+
+                    continue;
+
+                case $db->getStatus()->isEquals(DbInfoStatus::MODIFIED):
+                    $this->output->writeln(
+                        PHP_EOL . "<bg=yellow;fg=black> --- Database '{$db->getName()}' is modified --- </>"
+                    );
+
+                    break;
+
+                case $db->getStatus()->isEquals(DbInfoStatus::CREATED):
+                    $this->output->writeln(
+                        PHP_EOL
+                        . "<bg=red;fg=white> --- Database '{$db->getName()}' was not found --- </>"
+                    );
+
+                    break;
+
+                case $db->getStatus()->isEquals(DbInfoStatus::REMOVED):
+                    $this->deleteDatabase($db->getName());
+                    $this->output->writeln(
+                        PHP_EOL .
+                        "<bg=yellow;fg=black> --- Database '{$db->getName()}' is missing in schema, dumping it --- </>"
+                    );
+
+                    continue;
+            }
+
+            foreach ($db->getTableList() as $table) {
+                switch (true) {
+                    case $table->getStatus()->isEquals(DbInfoStatus::ACTUAL):
+                        $this->output->writeln(
+                            "Table '{$table->getTableName()}'is equal"
+                        );
+                        break;
+
+                    case $table->getStatus()->isEquals(DbInfoStatus::MODIFIED):
+                        $status = $this->stdInHelper->confirm(
+                            "Table '{$table->getTableName()}' was modified, recreate it?"
+                        );
+                        if ($status) {
+                            $this->createSchema($db->getName(), $table->getTableName(), $table->getDbSyntax());
+                            $this->output->writeln(
+                                "Schema '{$table->getTableName()}' was successfully recreated"
+                            );
+                        }
+
+                        break;
+
+                    // Table is missing in db but exists in schema files
+                    case $table->getStatus()->isEquals(DbInfoStatus::CREATED):
+                        $status = $this->stdInHelper->confirm(
+                            "Table '{$table->getTableName()}' was removed, delete schema?"
+                        );
+                        if ($status) {
+                            $this->deleteSchema($db->getName(), $table->getTableName());
+                            $this->output->writeln(
+                                "Schema '{$table->getTableName()}' was successfully removed"
+                            );
+                        }
+
+                        break;
+
+                    // Table is created in db but missing schema file
+                    case $table->getStatus()->isEquals(DbInfoStatus::REMOVED):
+                        $this->createSchema($db->getName(), $table->getTableName(), $table->getDbSyntax());
+                        $this->output->writeln(
+                            "Schema '{$table->getTableName()}' was successfully created"
+                        );
+
+                        break;
+                }
+            }
+        }
     }
 
     /**
@@ -292,11 +482,18 @@ class SchemaComponent implements SchemaComponentInterface
         return $dbList;
     }
 
+    /**
+     * Check schema diff
+     *
+     * @param string $localSchema
+     * @param TableInfoInterface $tableInfo
+     * @param string|null $dbSchema
+     */
     public function checkSchemaDiff(
         string $localSchema,
         TableInfoInterface $tableInfo,
         string $dbSchema = null
-    ) {
+    ): void {
         // Check table fields if table exist in db
         if (!is_null($dbSchema)) {
             $localSchemaParts = explode("\n", $localSchema);
@@ -313,8 +510,19 @@ class SchemaComponent implements SchemaComponentInterface
              */
             $newParsedRows = [];
             $removedParsedRows = [];
-            foreach ($newRows as $row) {
+            foreach ($newRows as $id => $row) {
                 $parsed = $this->parseSchemaRow($row);
+
+                // Get new row location
+                $location = $this->getNewRowLocation(
+                    $localSchemaParts,
+                    $id,
+                    $parsed->getType()
+                );
+                if ($location !== null) {
+                    $parsed = $parsed->setLocation($location);
+                }
+
                 $key = $parsed->getType()->getValue() . "_" . $parsed->getName();
                 $newParsedRows[$key] = $parsed;
             }
@@ -334,7 +542,11 @@ class SchemaComponent implements SchemaComponentInterface
                     unset($removedParsedRows[$key]);
                 } else {
                     $tableInfo->addChanges(
-                        new TableChanges($row->getRow(), new TableChangesAction(TableChangesAction::ADD))
+                        new TableChanges(
+                            $row->getType()->isEquals(TableRowType::COLUMN)
+                                ? $row->getPreparedRow() : $row->getName(),
+                            new TableChangesAction(TableChangesAction::ADD)
+                        )
                     );
                 }
             }
@@ -352,23 +564,57 @@ class SchemaComponent implements SchemaComponentInterface
      * @param string $row
      * @return TableRowInterface
      */
-    public function parseSchemaRow(string $row)
+    public function parseSchemaRow(string $row): TableRowInterface
     {
         $row = rtrim(trim($row), ",");
 
         switch (true) {
             // Column
             case preg_match("/^\s*(\`(.+)\`\s.+)$/", $row, $matches):
-                $result = new TableRow($matches[1], new TableRowType(TableRowType::COLUMN), $matches[2]);
+                $result = new TableRow(
+                    $matches[1],
+                    new TableRowType(TableRowType::COLUMN),
+                    $matches[2]
+                );
                 break;
 
             // Index
             case preg_match("/^\s*(.*KEY\s\(?\`([^\`\)]+)\`\)?.*)$/", $row, $matches):
-                $result = new TableRow($matches[1], new TableRowType(TableRowType::KEY), $matches[2]);
+                $result = new TableRow(
+                    $matches[1],
+                    new TableRowType(TableRowType::KEY),
+                    $matches[2]
+                );
                 break;
 
             default:
                 $result = new TableRow($row, new TableRowType(TableRowType::KEY));
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get new row location in table
+     *
+     * @param string[] $schemaParts
+     * @param int $currentId
+     * @param TableRowType $type
+     * @return null|string
+     */
+    public function getNewRowLocation(
+        array $schemaParts,
+        int $currentId,
+        TableRowType $type
+    ) :? string {
+        $result = "FIRST";
+        $prevId = --$currentId;
+
+        if ($prevId > 0) {
+            $row = $this->parseSchemaRow($schemaParts[$prevId]);
+            if ($row->getType()->isEquals($type) && $row->getName() !== null) {
+                $result = "AFTER `" . $row->getName() . "`";
+            }
         }
 
         return $result;
@@ -485,7 +731,7 @@ class SchemaComponent implements SchemaComponentInterface
      * @param bool $force
      * @throws GeneralException
      */
-    public function createTable(string $database, string $schema, bool $force): void
+    public function createTable(string $database, string $schema, bool $force = false): void
     {
         if ($database === "") {
             throw new EmptyStringException("database");
@@ -504,7 +750,9 @@ class SchemaComponent implements SchemaComponentInterface
             $this->deleteTable($database, $tableName);
         }
 
-        $this->dbConnection->getConnection($database)->exec($schema);
+        $this->dbConnection->getConnection($database)->exec(
+            $this->addDatabaseToSchema($database, $schema)
+        );
         $this->logger->debug(
             "Successfully created table {$tableName} in db {database}",
             ["object" => $this, "sql" => $schema, "database" => $database]
@@ -547,7 +795,7 @@ class SchemaComponent implements SchemaComponentInterface
      * @param bool $force
      * @throws GeneralException
      */
-    public function createDatabase(string $database, bool $force): void
+    public function createDatabase(string $database, bool $force = false): void
     {
         if ($database === "") {
             throw new EmptyStringException("database");
@@ -686,5 +934,117 @@ class SchemaComponent implements SchemaComponentInterface
         }
 
         return end($matches);
+    }
+
+    /**
+     * Add database name to schema
+     *
+     * @param string $database
+     * @param string $schema
+     * @return string
+     */
+    public function addDatabaseToSchema(string $database, string $schema): string
+    {
+        if ($database === "") {
+            throw new EmptyStringException("database");
+        }
+
+        if ($schema === "") {
+            throw new EmptyStringException("schema");
+        }
+
+        return preg_replace_callback(
+            "/^(CREATE\s+TABLE\s+)\`([a-zA-Z0-9-_\.]+)\`(\s+\()/",
+            function ($matches) use ($database) {
+                return  "{$matches[1]}`{$database}`.`{$matches[2]}`{$matches[3]}";
+            },
+            $schema
+        );
+    }
+
+    /**
+     * Create schema in database directory
+     *
+     * @param string $database
+     * @param string $tableName
+     * @param string $syntax
+     */
+    public function createSchema(
+        string $database,
+        string $tableName,
+        string $syntax
+    ): void {
+        if ($database === "") {
+            throw new EmptyStringException("database");
+        }
+
+        if ($tableName === "") {
+            throw new EmptyStringException("tableName");
+        }
+
+        if ($syntax === "") {
+            throw new EmptyStringException("syntax");
+        }
+
+        $this->createDatabaseFolder($database);
+
+        $path = $this->schemaFolderPath . "{$database}/{$tableName}.sql";
+        file_put_contents($path, $syntax);
+    }
+
+    /**
+     * Delete schema folder from database directory
+     *
+     * @param string $database
+     * @param string $tableName
+     */
+    public function deleteSchema(string $database, string $tableName): void
+    {
+        if ($database === "") {
+            throw new EmptyStringException("database");
+        }
+
+        if ($tableName === "") {
+            throw new EmptyStringException("tableName");
+        }
+
+        $path = $this->schemaFolderPath . "{$database}/{$tableName}.sql";
+        if ($this->filesystem->exists($path)) {
+            $this->filesystem->remove($path);
+        }
+    }
+
+    /**
+     * Create database folder in schema directory
+     *
+     * @param string $database
+     */
+    public function createDatabaseFolder(string $database): void
+    {
+        if ($database === "") {
+            throw new EmptyStringException("database");
+        }
+
+        $path = $this->schemaFolderPath . $database;
+        if (!$this->filesystem->exists($path)) {
+            $this->filesystem->mkdir($path, self::DEFAULT_FOLDER_PERMISSIONS);
+        }
+    }
+
+    /**
+     * Delete database folder from schema directory
+     *
+     * @param string $database
+     */
+    public function deleteDatabaseFolder(string $database): void
+    {
+        if ($database === "") {
+            throw new EmptyStringException($database);
+        }
+
+        $path = $this->schemaFolderPath . $database;
+        if ($this->filesystem->exists($path)) {
+            $this->filesystem->remove($path);
+        }
     }
 }

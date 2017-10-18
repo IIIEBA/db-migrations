@@ -82,7 +82,7 @@ class StdInHelper
     private function getStdIn(string $message = null): string
     {
         if (!is_null($message) && $message !== "") {
-            $this->output->writeln("<comment>{$message}:</comment>");
+            $this->output->write("<comment>{$message}:</comment> ");
         }
 
         $handle = fopen("php://stdin", "r");

@@ -1,42 +1,36 @@
 <?php
 
+declare(strict_types=1);
+
 namespace DbMigrations\Module\Schema\Command;
 
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
- * Class Init
- * @package DbMigrations\Command
+ * Class Dump
+ * @package DbMigrations\Module\Schema\Command
  */
-class Init extends AbstractSchemaCommand
+class Dump extends AbstractSchemaCommand
 {
     /**
      * @inheritdoc
      */
     protected function configure()
     {
-        $this->setName("schema:init");
-        $this->setDescription("Init databases from schema files");
+        $this->setName("schema:dump");
+        $this->setDescription("Create database dump to schema files");
         $this->addArgument(
             "db-name",
             InputArgument::OPTIONAL,
-            "Init only one db folder",
+            "Dump only one db",
             null
         );
         $this->addArgument(
-            "schema-name",
+            "table-name",
             InputArgument::OPTIONAL,
-            "Init only one schema file",
-            null
-        );
-        $this->addOption(
-            "without-data",
-            null,
-            InputOption::VALUE_NONE,
-            "Skip init data from 'init' folder",
+            "Dump only one table",
             null
         );
     }
@@ -48,10 +42,9 @@ class Init extends AbstractSchemaCommand
     {
         $this->checkForceFlag($input);
 
-        $this->getSchemaComponent()->initDb(
+        $this->getSchemaComponent()->dumpDb(
             $input->getArgument("db-name"),
-            $input->getArgument("schema-name"),
-            $input->getOption("without-data")
+            $input->getArgument("table-name")
         );
     }
 }

@@ -19,7 +19,7 @@
   ],
   "require": {
     "ashevchuk/base-exceptions": "*",
-    "ashevchuk/enum": "*",
+    "ashevchuk/enum": "1.0.1",
     "symfony/console": "*",
     "symfony/filesystem": "*",
     "symfony/yaml": "*",

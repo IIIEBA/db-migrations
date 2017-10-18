@@ -26,4 +26,20 @@ interface TableRowInterface
      * @return TableRowType
      */
     public function getType(): TableRowType;
+
+    /**
+     * @return null|string
+     */
+    public function getLocation(): ?string;
+
+    /**
+     * @param string $location
+     * @return TableRowInterface
+     */
+    public function setLocation(string $location): TableRowInterface;
+
+    /**
+     * @return string
+     */
+    public function getPreparedRow(): string;
 }

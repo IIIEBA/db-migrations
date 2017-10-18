@@ -25,6 +25,13 @@ interface DbConnectionInterface
     public function getDefaultConnection(): \PDO;
 
     /**
+     * Get list of configured connection names
+     *
+     * @return string[]
+     */
+    public function getConnectionNamesList(): array;
+
+    /**
      * @param string $name
      * @param \PDO $connectionList
      * @throws GeneralException

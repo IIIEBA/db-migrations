@@ -12,8 +12,8 @@ use Enum\Lib\Enum;
  */
 class DbInfoStatus extends Enum
 {
-    const ACTUAL = "";
-    const CREATED = "+";
-    const REMOVED = "-";
-    const MODIFIED = "?";
+    const ACTUAL = "actual";
+    const CREATED = "created";
+    const REMOVED = "removed";
+    const MODIFIED = "modified";
 }

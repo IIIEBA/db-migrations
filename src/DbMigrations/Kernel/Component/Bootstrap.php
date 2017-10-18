@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DbMigrations\Kernel\Component;
 
+use DbMigrations\Module\Schema\Command\Dump;
 use DbMigrations\Module\Schema\Command\Init;
 use DbMigrations\Module\Schema\Command\Migrate;
 use DbMigrations\Module\Schema\Command\Status;
@@ -135,6 +136,7 @@ class Bootstrap
         $this->application->add(new Init($this->schema, $this->stdInHelper, $this->logger));
         $this->application->add(new Migrate($this->schema, $this->stdInHelper, $this->logger));
         $this->application->add(new Status($this->schema, $this->stdInHelper, $this->logger));
+        $this->application->add(new Dump($this->schema, $this->stdInHelper, $this->logger));
 
         $this->application->run($this->input, $this->output);
     }
