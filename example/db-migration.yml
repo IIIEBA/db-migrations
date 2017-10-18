@@ -1,0 +1,30 @@
+
+setup:
+  environment:
+    ENV:
+      system: "ENV"
+      default: "dev"
+
+  parsers:
+    OPTIONS:
+      enabled: true
+      type: "yaml"
+      folderPath: "config"
+      files:
+        - "options.yml"
+        - "options.%ENV:ENV%.yml"
+        - "options.custom.yml"
+      subVariables:
+        - "parameters"
+
+  general:
+    dbFolderPath: "db"
+
+db:
+  _default:
+    driver: "mysql"
+    host: "%PARSER:OPTIONS:mysql.base.host%"
+    user: "%PARSER:OPTIONS:mysql.base.user%"
+    pass: "%PARSER:OPTIONS:mysql.base.pass%"
+    port: "%PARSER:OPTIONS:mysql.base.port%"
+    charset: "%PARSER:OPTIONS:mysql.base.charset%"

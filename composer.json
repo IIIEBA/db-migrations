@@ -10,16 +10,16 @@
   ],
   "minimum-stability": "stable",
   "autoload": {
-    "psr-4": {
-      "DbMigrations\\": "src/DbMigrations"
+    "psr-0": {
+      "": "src"
     }
   },
   "bin": [
-    "bin/db"
+    "bin/db-migrations"
   ],
   "require": {
     "ashevchuk/base-exceptions": "*",
-    "ashevchuk/enum": "1.0.1",
+    "ashevchuk/enum": "^1.0.1",
     "symfony/console": "*",
     "symfony/filesystem": "*",
     "symfony/yaml": "*",
