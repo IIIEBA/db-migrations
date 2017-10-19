@@ -689,7 +689,7 @@ class SchemaComponent implements SchemaComponentInterface
     public function parseLocalSchemas(): array
     {
         if ($this->filesystem->exists($this->schemaFolderPath) === false) {
-            throw new GeneralException("Schema folder does not exists");
+            $this->filesystem->mkdir($this->schemaFolderPath, self::DEFAULT_FOLDER_PERMISSIONS);
         }
 
         $result = [];
