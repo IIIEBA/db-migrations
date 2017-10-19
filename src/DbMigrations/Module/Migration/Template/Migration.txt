@@ -1,0 +1,46 @@
+<?php
+
+declare(strict_types=1);
+
+namespace DbMigrations\Migration;
+
+use DbMigrations\Module\Migration\Component\AbstractMigration;
+use DbMigrations\Module\Migration\Component\MigrationInterface;
+
+/**
+ * Class %migrationName%
+ * @package DbMigrations\Module\Migration\Template
+ */
+class %migrationName% extends AbstractMigration implements MigrationInterface
+{
+    /**
+     * @var bool $isHeavyMigration
+     */
+    private $isHeavyMigration = %isHeavyMigration%;
+
+    /**
+     * Apply migration
+     */
+    public function up(): void
+    {
+        %upCode%
+    }
+
+    /**
+     * Revert migration
+     */
+    public function down(): void
+    {
+        %downCode%
+    }
+
+    /**
+     * Is heavy migration flag (for different apply and revert flow)
+     *
+     * @return bool
+     */
+    public function isHeavyMigration(): bool
+    {
+        return $this->isHeavyMigration;
+    }
+}

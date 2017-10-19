@@ -48,8 +48,14 @@ class DbConnection implements DbConnectionInterface
             throw new EmptyStringException("name");
         }
 
-        return array_key_exists($name, $this->connectionList)
+        $connection = array_key_exists($name, $this->connectionList)
             ? $this->connectionList[$name] : $this->getDefaultConnection();
+
+        if ($this->isDatabaseExists($name, $connection)) {
+            $connection->exec("USE `{$name}`");
+        }
+
+        return $connection;
     }
 
     /**
@@ -96,5 +102,24 @@ class DbConnection implements DbConnectionInterface
         }
 
         $this->connectionList[$name] = $connectionList;
+    }
+
+    /**
+     * Check is database exists
+     *
+     * @param string $database
+     * @param \PDO $connection
+     * @return bool
+     */
+    public function isDatabaseExists(string $database, \PDO $connection): bool
+    {
+        if ($database === "") {
+            throw new EmptyStringException("database");
+        }
+
+        $sql = "SHOW DATABASES LIKE '{$database}'";
+        $result = $connection->query($sql)->rowCount();
+
+        return boolval($result);
     }
 }

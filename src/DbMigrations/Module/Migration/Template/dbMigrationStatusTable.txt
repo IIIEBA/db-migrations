@@ -1,0 +1,8 @@
+CREATE TABLE `_db_%tableName%` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `migrationId` varchar(32) NOT NULL DEFAULT '',
+  `name` varchar(128) NOT NULL DEFAULT '',
+  `startedAt` decimal(16,6) unsigned NOT NULL,
+  `appliedAt` decimal(16,6) unsigned NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

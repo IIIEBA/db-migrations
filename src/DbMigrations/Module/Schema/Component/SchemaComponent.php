@@ -39,6 +39,7 @@ class SchemaComponent implements SchemaComponentInterface
 
     const SCHEMA_FOLDER = "schema";
     const DEFAULT_FOLDER_PERMISSIONS = 0755;
+    const SYSTEM_TABLES_REGEXP = "/^_db_.+$/";
 
     /**
      * @var GeneralConfigInterface
@@ -139,10 +140,11 @@ class SchemaComponent implements SchemaComponentInterface
 
                 case $db->getStatus()->isEquals(DbInfoStatus::REMOVED):
                     $this->output->writeln(
-                        PHP_EOL . "<error> --- Requested database '{$db->getName()}' was not found --- </error>"
+                        PHP_EOL
+                        . "<error> --- Requested database '{$db->getName()}' was not found in schema --- </error>"
                     );
 
-                    continue;
+                    continue 2;
             }
 
             if ($tableName !== null && count($db->getTableList()) === 0) {
@@ -182,7 +184,7 @@ class SchemaComponent implements SchemaComponentInterface
                         PHP_EOL . "<bg=white;fg=black> --- Database '{$db->getName()}' is actual --- </>"
                     );
 
-                    continue;
+                    continue 2;
 
                 case $db->getStatus()->isEquals(DbInfoStatus::MODIFIED):
                     $this->output->writeln(
@@ -211,11 +213,14 @@ class SchemaComponent implements SchemaComponentInterface
                             PHP_EOL .
                             "<bg=green;fg=black> --- Database '{$db->getName()}' was successfully deleted --- </>"
                         );
-
-                        continue;
+                    } else {
+                        $this->output->writeln(
+                            PHP_EOL .
+                            "<bg=red;fg=white> --- Database '{$db->getName()}' was not found in schema --- </>"
+                        );
                     }
 
-                    continue;
+                    continue 2;
             }
 
             foreach ($db->getTableList() as $table) {
@@ -282,11 +287,6 @@ class SchemaComponent implements SchemaComponentInterface
         }
 
         $this->output->writeln("");
-    }
-
-    public function migrate(): void
-    {
-        // TODO
     }
 
     /**
@@ -872,16 +872,14 @@ class SchemaComponent implements SchemaComponentInterface
             throw new EmptyStringException("database");
         }
 
-        if ($this->isDatabaseExists($database) === false) {
-            throw new GeneralException("Requested db - '{$database}' is not exists");
+        if ($this->isDatabaseExists($database)) {
+            $sql = "DROP DATABASE {$database}";
+            $this->dbConnection->getConnection($database)->exec($sql);
+            $this->logger->debug(
+                "Successfully removed db {database}",
+                ["object" => $this, "sql" => $sql, "database" => $database]
+            );
         }
-
-        $sql = "DROP DATABASE {$database}";
-        $this->dbConnection->getConnection($database)->exec($sql);
-        $this->logger->debug(
-            "Successfully removed db {database}",
-            ["object" => $this, "sql" => $sql, "database" => $database]
-        );
     }
 
     /**
@@ -955,7 +953,13 @@ class SchemaComponent implements SchemaComponentInterface
             );
         }
 
-        return $result;
+        // Remove system tables from this list
+        return array_filter(
+            $result,
+            function ($name) {
+                return !preg_match(self::SYSTEM_TABLES_REGEXP, $name);
+            }
+        );
     }
 
     /**

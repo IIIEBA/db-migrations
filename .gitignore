@@ -1,9 +1,9 @@
 ### JetBrains template
-.idea/
+.idea
 
 ### Composer ###
-/vendor/
+/vendor
 
 ### Project ignores ###
-/config/
-/db/
+/config
+/db
