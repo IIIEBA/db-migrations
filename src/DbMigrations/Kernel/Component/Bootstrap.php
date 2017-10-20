@@ -14,6 +14,8 @@ use DbMigrations\Module\Migration\Component\MigrationComponent;
 use DbMigrations\Module\Migration\Component\MigrationComponentInterface;
 use DbMigrations\Module\Migration\Component\MigrationGenerator;
 use DbMigrations\Module\Migration\Component\MigrationGeneratorInterface;
+use DbMigrations\Module\Migration\Component\MigrationRepositoryManager;
+use DbMigrations\Module\Migration\Component\MigrationRepositoryManagerInterface;
 use DbMigrations\Module\Migration\Enum\MigrationType;
 use DbMigrations\Module\Schema\Command\Dump;
 use DbMigrations\Module\Schema\Command\Init;
@@ -100,6 +102,14 @@ class Bootstrap
      * @var MigrationGeneratorInterface
      */
     private $dataMigrationGenerator;
+    /**
+     * @var MigrationRepositoryManagerInterface
+     */
+    private $structureRepositoryManager;
+    /**
+     * @var MigrationRepositoryManagerInterface
+     */
+    private $dataRepositoryManager;
 
     /**
      * Bootstrap constructor.
@@ -175,6 +185,13 @@ class Bootstrap
             $this->getLogger()
         );
 
+        $this->structureRepositoryManager = new MigrationRepositoryManager(
+            $this->dbConnection,
+            $this->filesystem,
+            MigrationType::STRUCTURE,
+            $this->getLogger()
+        );
+
         $this->dataMigrationBuilder = new MigrationBuilder(
             $this->config->getGeneralConfig(),
             $this->dbConnection,
@@ -190,6 +207,13 @@ class Bootstrap
             $this->getLogger()
         );
 
+        $this->dataRepositoryManager = new MigrationRepositoryManager(
+            $this->dbConnection,
+            $this->filesystem,
+            MigrationType::DATA,
+            $this->getLogger()
+        );
+
         $this->migration = new MigrationComponent(
             $this->config->getGeneralConfig(),
             $this->dbConnection,
@@ -200,6 +224,8 @@ class Bootstrap
             $this->dataMigrationBuilder,
             $this->structureMigrationGenerator,
             $this->dataMigrationGenerator,
+            $this->structureRepositoryManager,
+            $this->dataRepositoryManager,
             $this->getLogger()
         );
     }
@@ -212,10 +238,10 @@ class Bootstrap
         $this->application->add(new Dump($this->schema, $this->stdInHelper, $this->logger));
 
         // Structure migration
-//        $this->application->add(new Create($this->migration, $this->stdInHelper, $this->logger));
-//        $this->application->add(new Up($this->migration, $this->stdInHelper, $this->logger));
-//        $this->application->add(new Down($this->migration, $this->stdInHelper, $this->logger));
-//        $this->application->add(new MigrationStatus($this->migration, $this->stdInHelper, $this->logger));
+        $this->application->add(new Create($this->migration, $this->stdInHelper, $this->logger));
+        $this->application->add(new Up($this->migration, $this->stdInHelper, $this->logger));
+        $this->application->add(new Down($this->migration, $this->stdInHelper, $this->logger));
+        $this->application->add(new MigrationStatus($this->migration, $this->stdInHelper, $this->logger));
 
         $this->application->run($this->input, $this->output);
     }

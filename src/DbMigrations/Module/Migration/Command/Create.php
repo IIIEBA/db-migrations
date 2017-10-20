@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DbMigrations\Module\Migration\Command;
 
+use DbMigrations\Module\Migration\Enum\MigrationType;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -20,7 +21,7 @@ class Create extends AbstractMigrationCommand
      */
     protected function configure()
     {
-        $this->setName("migration:create");
+        $this->setName("structure:create");
         $this->setDescription("Create migration file");
         $this->addArgument(
             "db-name",
@@ -41,6 +42,12 @@ class Create extends AbstractMigrationCommand
             "Create migration depends on schema file (only ALTER, not CREATE or DELETE)",
             null
         );
+        $this->addOption(
+            "is-heavy-migration",
+            "p",
+            InputOption::VALUE_NONE,
+            "If heavy selected - migration will be applied by percona tools (IN PROGRESS)"
+        );
     }
 
     /**
@@ -48,6 +55,12 @@ class Create extends AbstractMigrationCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-
+        $this->getMigrationComponent()->createMigration(
+            $input->getArgument("db-name"),
+            $input->getArgument("migration-name"),
+            new MigrationType(MigrationType::STRUCTURE),
+            $input->getOption("is-heavy-migration"),
+            $input->getOption("schema-name")
+        );
     }
 }

@@ -68,6 +68,14 @@ class MigrationComponent implements MigrationComponentInterface
      * @var MigrationGeneratorInterface
      */
     private $dataMigrationGenerator;
+    /**
+     * @var MigrationRepositoryManagerInterface
+     */
+    private $structureRepositoryManager;
+    /**
+     * @var MigrationRepositoryManagerInterface
+     */
+    private $dataRepositoryManager;
 
     /**
      * MigrationComponent constructor.
@@ -81,6 +89,8 @@ class MigrationComponent implements MigrationComponentInterface
      * @param MigrationBuilderInterface $dataMigrationBuilder
      * @param MigrationGeneratorInterface $structureMigrationGenerator
      * @param MigrationGeneratorInterface $dataMigrationGenerator
+     * @param MigrationRepositoryManagerInterface $structureRepositoryManager
+     * @param MigrationRepositoryManagerInterface $dataRepositoryManager
      * @param LoggerInterface|null $logger
      */
     public function __construct(
@@ -93,6 +103,8 @@ class MigrationComponent implements MigrationComponentInterface
         MigrationBuilderInterface $dataMigrationBuilder,
         MigrationGeneratorInterface $structureMigrationGenerator,
         MigrationGeneratorInterface $dataMigrationGenerator,
+        MigrationRepositoryManagerInterface $structureRepositoryManager,
+        MigrationRepositoryManagerInterface $dataRepositoryManager,
         LoggerInterface $logger = null
     ) {
         $this->setLogger($logger);
@@ -106,6 +118,8 @@ class MigrationComponent implements MigrationComponentInterface
         $this->dataMigrationBuilder = $dataMigrationBuilder;
         $this->structureMigrationGenerator = $structureMigrationGenerator;
         $this->dataMigrationGenerator = $dataMigrationGenerator;
+        $this->structureRepositoryManager = $structureRepositoryManager;
+        $this->dataRepositoryManager = $dataRepositoryManager;
 
         $this->migrationFolderPath = PROJECT_ROOT . $config->getDbFolderPath() . MigrationType::STRUCTURE . "/";
         $this->dataFolderPath = PROJECT_ROOT . $config->getDbFolderPath() . MigrationType::DATA . "/";
@@ -127,7 +141,18 @@ class MigrationComponent implements MigrationComponentInterface
         bool $isHeavyMigration = false,
         string $schemaName = null
     ): void {
-        throw new NotImplementedException();
+        $migrationGenerator = $type->isEquals(MigrationType::STRUCTURE)
+            ? $this->structureMigrationGenerator : $this->dataMigrationGenerator;
+
+        $migrationRepository = $type->isEquals(MigrationType::STRUCTURE)
+            ? $this->structureRepositoryManager : $this->dataRepositoryManager;
+
+        $migrationRepository->get($dbName)->checkDatabase();
+        $name = $migrationGenerator->generateMigration($dbName, $name, $isHeavyMigration);
+
+        $this->output->writeln("New <comment>{$type->getValue()}</comment> migration in database"
+            . " <comment>{$dbName}</comment> was successfully created with name - <comment>{$name}</comment>");
+        $this->output->writeln("");
     }
 
     /**

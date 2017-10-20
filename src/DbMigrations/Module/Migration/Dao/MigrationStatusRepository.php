@@ -188,10 +188,10 @@ class MigrationStatusRepository implements MigrationStatusRepositoryInterface
      *
      * @throws GeneralException
      */
-    public function checkDatabase()
+    public function checkDatabase(): void
     {
         if ($this->isDbChecked === false) {
-            $dbName = $this->exec("SELECT DATABASE() AS db")->fetchColumn();
+            $dbName = $this->connection->query("SELECT DATABASE() AS db")->fetchColumn();
             if ($dbName === null) {
                 throw new GeneralException("Migration can be ran only for existed database, try to init it first");
             }
@@ -205,10 +205,10 @@ class MigrationStatusRepository implements MigrationStatusRepositoryInterface
      *
      * @throws GeneralException
      */
-    public function checkAndCreateStatusTableIfNotExist()
+    public function checkAndCreateStatusTableIfNotExist(): void
     {
         if ($this->isTableChecked === false) {
-            if ($this->exec("SHOW TABLES LIKE '{$this->tableName}'")->rowCount() === 0) {
+            if ($this->connection->query("SHOW TABLES LIKE '{$this->tableName}'")->rowCount() === 0) {
                 if ($this->filesystem->exists($this->dbTableTemplatePath) == false) {
                     throw new GeneralException(
                         "Migration status table template doesn`t exist by path [{$this->dbTableTemplatePath}]"

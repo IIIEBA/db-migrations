@@ -27,4 +27,11 @@ interface MigrationStatusRepositoryInterface
      * @throws GeneralException
      */
     public function store(MigrationStatusInterface $object): MigrationStatusInterface;
+
+    /**
+     * Check is we get connection with selected database
+     *
+     * @throws GeneralException
+     */
+    public function checkDatabase(): void;
 }

@@ -19,7 +19,7 @@ class Status extends AbstractMigrationCommand
      */
     protected function configure()
     {
-        $this->setName("migration:status");
+        $this->setName("structure:status");
         $this->setDescription("Show status for migrations");
         $this->addArgument(
             "db-name",

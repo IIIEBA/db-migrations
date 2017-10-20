@@ -20,7 +20,7 @@ class Down extends AbstractMigrationCommand
      */
     protected function configure()
     {
-        $this->setName("migration:down");
+        $this->setName("structure:down");
         $this->setDescription("Revert to or selected migration");
         $this->addArgument(
             "db-name",
