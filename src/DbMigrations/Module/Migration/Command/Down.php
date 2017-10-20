@@ -37,7 +37,7 @@ class Down extends AbstractMigrationCommand
         $this->addOption(
             "only-single",
             "s",
-            InputOption::VALUE_OPTIONAL,
+            InputOption::VALUE_NONE,
             "Revert only requested migration"
         );
     }

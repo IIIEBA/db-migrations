@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace DbMigrations\Module\Migration\Component;
 
+use BaseExceptions\Exception\LogicException\NotImplementedException;
 use DbMigrations\Kernel\Component\DbConnectionInterface;
 use DbMigrations\Kernel\Model\GeneralConfigInterface;
 use DbMigrations\Kernel\Util\LoggerTrait;
 use DbMigrations\Kernel\Util\StdInHelper;
+use DbMigrations\Module\Migration\Enum\MigrationType;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Filesystem;
@@ -79,8 +81,6 @@ class MigrationComponent implements MigrationComponentInterface
      * @param MigrationBuilderInterface $dataMigrationBuilder
      * @param MigrationGeneratorInterface $structureMigrationGenerator
      * @param MigrationGeneratorInterface $dataMigrationGenerator
-     * @param string $migrationFolder
-     * @param string $dataFolder
      * @param LoggerInterface|null $logger
      */
     public function __construct(
@@ -93,8 +93,6 @@ class MigrationComponent implements MigrationComponentInterface
         MigrationBuilderInterface $dataMigrationBuilder,
         MigrationGeneratorInterface $structureMigrationGenerator,
         MigrationGeneratorInterface $dataMigrationGenerator,
-        string $migrationFolder,
-        string $dataFolder,
         LoggerInterface $logger = null
     ) {
         $this->setLogger($logger);
@@ -109,7 +107,75 @@ class MigrationComponent implements MigrationComponentInterface
         $this->structureMigrationGenerator = $structureMigrationGenerator;
         $this->dataMigrationGenerator = $dataMigrationGenerator;
 
-        $this->migrationFolderPath = PROJECT_ROOT . $config->getDbFolderPath() . $migrationFolder . "/";
-        $this->dataFolderPath = PROJECT_ROOT . $config->getDbFolderPath() . $dataFolder . "/";
+        $this->migrationFolderPath = PROJECT_ROOT . $config->getDbFolderPath() . MigrationType::STRUCTURE . "/";
+        $this->dataFolderPath = PROJECT_ROOT . $config->getDbFolderPath() . MigrationType::DATA . "/";
+    }
+
+    /**
+     * Create new migration for selected database
+     *
+     * @param string $dbName
+     * @param string $name
+     * @param MigrationType $type
+     * @param bool $isHeavyMigration
+     * @param string|null $schemaName
+     */
+    public function createMigration(
+        string $dbName,
+        string $name,
+        MigrationType $type,
+        bool $isHeavyMigration = false,
+        string $schemaName = null
+    ): void {
+        throw new NotImplementedException();
+    }
+
+    /**
+     * Migrate to selected migration or only selected migration
+     *
+     * @param MigrationType $type
+     * @param string|null $dbName
+     * @param string|null $migrationId
+     * @param bool $onlySingle
+     */
+    public function migrationsUp(
+        MigrationType $type,
+        string $dbName = null,
+        string $migrationId = null,
+        bool $onlySingle = false
+    ): void {
+        throw new NotImplementedException();
+    }
+
+    /**
+     * Rollback to selected migration or only selected migration
+     *
+     * @param string $dbName
+     * @param string $migrationId
+     * @param MigrationType $type
+     * @param bool $onlySingle
+     */
+    public function migrationsDown(
+        string $dbName,
+        string $migrationId,
+        MigrationType $type,
+        bool $onlySingle = false
+    ): void {
+        throw new NotImplementedException();
+    }
+
+    /**
+     * Show migrations status
+     *
+     * @param MigrationType $type
+     * @param string|null $dbName
+     * @param string|null $migrationId
+     */
+    public function migrationsStatus(
+        MigrationType $type,
+        string $dbName = null,
+        string $migrationId = null
+    ): void {
+        throw new NotImplementedException();
     }
 }

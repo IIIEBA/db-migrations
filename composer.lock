@@ -4,21 +4,24 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "40b7325f73fb73f953f9554a2351181c",
+    "content-hash": "36f40b5aa1c43f4625d9fb3cceb6f7de",
     "packages": [
         {
             "name": "ashevchuk/base-exceptions",
-            "version": "0.1.3",
+            "version": "1.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/IIIEBA/base-exceptions.git",
-                "reference": "3c4f662b6b00b6f1f1b081640d612e6a271b18f3"
+                "reference": "12a09c9383bd37939bfc7a1a526c04ba0f4b6f80"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/IIIEBA/base-exceptions/zipball/3c4f662b6b00b6f1f1b081640d612e6a271b18f3",
-                "reference": "3c4f662b6b00b6f1f1b081640d612e6a271b18f3",
+                "url": "https://api.github.com/repos/IIIEBA/base-exceptions/zipball/12a09c9383bd37939bfc7a1a526c04ba0f4b6f80",
+                "reference": "12a09c9383bd37939bfc7a1a526c04ba0f4b6f80",
                 "shasum": ""
+            },
+            "require": {
+                "ashevchuk/enum": "^1"
             },
             "type": "library",
             "autoload": {
@@ -34,7 +37,7 @@
                 }
             ],
             "description": "List of base exceptions for application",
-            "time": "2016-02-25T13:36:04+00:00"
+            "time": "2017-10-20T08:57:16+00:00"
         },
         {
             "name": "ashevchuk/enum",

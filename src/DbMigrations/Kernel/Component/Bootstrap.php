@@ -14,6 +14,7 @@ use DbMigrations\Module\Migration\Component\MigrationComponent;
 use DbMigrations\Module\Migration\Component\MigrationComponentInterface;
 use DbMigrations\Module\Migration\Component\MigrationGenerator;
 use DbMigrations\Module\Migration\Component\MigrationGeneratorInterface;
+use DbMigrations\Module\Migration\Enum\MigrationType;
 use DbMigrations\Module\Schema\Command\Dump;
 use DbMigrations\Module\Schema\Command\Init;
 use DbMigrations\Module\Schema\Command\Status;
@@ -38,8 +39,6 @@ class Bootstrap
     use LoggerTrait;
 
     const CONFIG_PATH = "config/db-migrations.yml";
-    const STRUCTURE_MIGRATION_FOLDER = "structure";
-    const DATA_MIGRATION_FOLDER = "data";
 
     /**
      * @var Application
@@ -165,14 +164,14 @@ class Bootstrap
             $this->config->getGeneralConfig(),
             $this->dbConnection,
             $this->filesystem,
-            self::STRUCTURE_MIGRATION_FOLDER,
+            MigrationType::STRUCTURE,
             $this->getLogger()
         );
 
         $this->structureMigrationGenerator = new MigrationGenerator(
             $this->config->getGeneralConfig(),
             $this->filesystem,
-            self::STRUCTURE_MIGRATION_FOLDER,
+            MigrationType::STRUCTURE,
             $this->getLogger()
         );
 
@@ -180,14 +179,14 @@ class Bootstrap
             $this->config->getGeneralConfig(),
             $this->dbConnection,
             $this->filesystem,
-            self::DATA_MIGRATION_FOLDER,
+            MigrationType::DATA,
             $this->getLogger()
         );
 
         $this->dataMigrationGenerator = new MigrationGenerator(
             $this->config->getGeneralConfig(),
             $this->filesystem,
-            self::DATA_MIGRATION_FOLDER,
+            MigrationType::DATA,
             $this->getLogger()
         );
 
@@ -201,8 +200,6 @@ class Bootstrap
             $this->dataMigrationBuilder,
             $this->structureMigrationGenerator,
             $this->dataMigrationGenerator,
-            self::STRUCTURE_MIGRATION_FOLDER,
-            self::DATA_MIGRATION_FOLDER,
             $this->getLogger()
         );
     }
@@ -215,10 +212,10 @@ class Bootstrap
         $this->application->add(new Dump($this->schema, $this->stdInHelper, $this->logger));
 
         // Structure migration
-        $this->application->add(new Create($this->migration, $this->stdInHelper, $this->logger));
-        $this->application->add(new Up($this->migration, $this->stdInHelper, $this->logger));
-        $this->application->add(new Down($this->migration, $this->stdInHelper, $this->logger));
-        $this->application->add(new MigrationStatus($this->migration, $this->stdInHelper, $this->logger));
+//        $this->application->add(new Create($this->migration, $this->stdInHelper, $this->logger));
+//        $this->application->add(new Up($this->migration, $this->stdInHelper, $this->logger));
+//        $this->application->add(new Down($this->migration, $this->stdInHelper, $this->logger));
+//        $this->application->add(new MigrationStatus($this->migration, $this->stdInHelper, $this->logger));
 
         $this->application->run($this->input, $this->output);
     }

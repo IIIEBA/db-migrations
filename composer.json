@@ -18,8 +18,8 @@
     "bin/db-migrations"
   ],
   "require": {
-    "ashevchuk/base-exceptions": "*",
-    "ashevchuk/enum": "^1.0.1",
+    "ashevchuk/base-exceptions": "^1",
+    "ashevchuk/enum": "^1",
     "symfony/console": "*",
     "symfony/filesystem": "*",
     "symfony/yaml": "*",

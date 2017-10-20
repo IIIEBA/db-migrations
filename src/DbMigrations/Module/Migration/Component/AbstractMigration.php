@@ -17,7 +17,7 @@ class AbstractMigration implements MigrationInterface
 {
     use LoggerTrait;
 
-    const CLASS_NAME_REGEXP = "/Migration_(\d+)_([a-zA-Z0-9_]+)$/";
+    const CLASS_NAME_REGEXP = "/Migration_(\d+)_([a-zA-Z0-9]+)$/";
 
     /**
      * @var PDO

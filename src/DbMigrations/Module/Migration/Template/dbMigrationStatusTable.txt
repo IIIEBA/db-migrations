@@ -1,4 +1,4 @@
-CREATE TABLE `_db_%tableName%` (
+CREATE TABLE `%tableName%` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `migrationId` varchar(32) NOT NULL DEFAULT '',
   `name` varchar(128) NOT NULL DEFAULT '',

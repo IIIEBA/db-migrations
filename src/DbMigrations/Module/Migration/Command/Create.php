@@ -6,6 +6,7 @@ namespace DbMigrations\Module\Migration\Command;
 
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -31,6 +32,13 @@ class Create extends AbstractMigrationCommand
             "migration-name",
             InputArgument::REQUIRED,
             "Name of migration (allowed only [a-zA-Z0-9_])",
+            null
+        );
+        $this->addOption(
+            "schema-name",
+            "s",
+            InputOption::VALUE_OPTIONAL,
+            "Create migration depends on schema file (only ALTER, not CREATE or DELETE)",
             null
         );
     }
