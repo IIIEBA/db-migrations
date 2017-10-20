@@ -8,6 +8,7 @@ use BaseExceptions\Exception\InvalidArgument\EmptyStringException;
 use DbMigrations\Kernel\Exception\GeneralException;
 use DbMigrations\Kernel\Model\GeneralConfigInterface;
 use DbMigrations\Kernel\Util\LoggerTrait;
+use DbMigrations\Module\Migration\Enum\MigrationType;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 
@@ -36,10 +37,6 @@ class MigrationGenerator implements MigrationGeneratorInterface
     /**
      * @var string
      */
-    private $migrationFolderPath;
-    /**
-     * @var string
-     */
     private $migrationTemplatePath;
 
     /**
@@ -47,20 +44,17 @@ class MigrationGenerator implements MigrationGeneratorInterface
      *
      * @param GeneralConfigInterface $config
      * @param Filesystem $filesystem
-     * @param string $migrationFolderName
      * @param LoggerInterface|null $logger
      */
     public function __construct(
         GeneralConfigInterface $config,
         Filesystem $filesystem,
-        string $migrationFolderName,
         LoggerInterface $logger = null
     ) {
         $this->setLogger($logger);
 
         $this->config = $config;
         $this->filesystem = $filesystem;
-        $this->migrationFolderPath = PROJECT_ROOT . $config->getDbFolderPath() . trim($migrationFolderName, "/") . "/";
         $this->migrationTemplatePath = __DIR__ . "/../Template/Migration.txt";
     }
 
@@ -69,6 +63,7 @@ class MigrationGenerator implements MigrationGeneratorInterface
      *
      * @param string $dbName
      * @param string $name
+     * @param MigrationType $type
      * @param bool $isHeavyMigration
      * @return string
      * @throws GeneralException
@@ -76,6 +71,7 @@ class MigrationGenerator implements MigrationGeneratorInterface
     public function generateMigration(
         string $dbName,
         string $name,
+        MigrationType $type,
         bool $isHeavyMigration = false
     ): string {
         if ($dbName === "") {
@@ -87,7 +83,7 @@ class MigrationGenerator implements MigrationGeneratorInterface
         }
 
         $className = $this->generateClassName($name);
-        $this->createDatabaseFolderIfNotExist($dbName);
+        $this->createDatabaseFolderIfNotExist($dbName, $type);
 
         if ($this->filesystem->exists($this->migrationTemplatePath) === false) {
             throw new GeneralException("Migration template doesn`t exist by path [{$this->migrationTemplatePath}]");
@@ -109,9 +105,8 @@ class MigrationGenerator implements MigrationGeneratorInterface
             file_get_contents($this->migrationTemplatePath)
         );
 
-
         file_put_contents(
-            $this->migrationFolderPath . "{$dbName}/{$className}.php",
+            $this->getMigrationFolderPath($dbName, $type) . "{$className}.php",
             $template
         );
 
@@ -122,17 +117,28 @@ class MigrationGenerator implements MigrationGeneratorInterface
      * Check is db folder exists and create it if not
      *
      * @param string $dbName
+     * @param MigrationType $type
      */
-    public function createDatabaseFolderIfNotExist(string $dbName): void
+    public function createDatabaseFolderIfNotExist(string $dbName, MigrationType $type): void
     {
         if ($dbName === "") {
             throw new EmptyStringException("dbName");
         }
 
-        $dbFolderPath = $this->migrationFolderPath . $dbName;
+        $dbFolderPath = $this->getMigrationFolderPath($dbName, $type);
         if ($this->filesystem->exists($dbFolderPath) === false) {
             $this->filesystem->mkdir($dbFolderPath, self::DEFAULT_FOLDER_PERMISSIONS);
         }
+    }
+
+    /**
+     * @param string $dbName
+     * @param MigrationType $type
+     * @return string
+     */
+    public function getMigrationFolderPath(string $dbName, MigrationType $type)
+    {
+        return PROJECT_ROOT . $this->config->getDbFolderPath() . "{$type->getValue()}/{$dbName}/";
     }
 
     /**

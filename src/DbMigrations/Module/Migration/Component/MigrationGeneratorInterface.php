@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace DbMigrations\Module\Migration\Component;
 
-use DbMigrations\Kernel\Exception\GeneralException;
+use DbMigrations\Module\Migration\Enum\MigrationType;
 
 /**
  * Class MigrationGenerator
@@ -17,9 +17,14 @@ interface MigrationGeneratorInterface
      *
      * @param string $dbName
      * @param string $name
+     * @param MigrationType $type
      * @param bool $isHeavyMigration
      * @return string
-     * @throws GeneralException
      */
-    public function generateMigration(string $dbName, string $name, bool $isHeavyMigration = false): string;
+    public function generateMigration(
+        string $dbName,
+        string $name,
+        MigrationType $type,
+        bool $isHeavyMigration = false
+    ): string;
 }

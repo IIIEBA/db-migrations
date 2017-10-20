@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace DbMigrations\Module\Migration\Component;
 
-use DbMigrations\Kernel\Exception\GeneralException;
+use DbMigrations\Module\Migration\Enum\MigrationType;
 
 /**
  * Class MigrationBuilder
@@ -17,8 +17,12 @@ interface MigrationBuilderInterface
      *
      * @param string $dbName
      * @param string $name
+     * @param MigrationType $type
      * @return MigrationInterface
-     * @throws GeneralException
      */
-    public function buildMigration(string $dbName, string $name): MigrationInterface;
+    public function buildMigration(
+        string $dbName,
+        string $name,
+        MigrationType $type
+    ): MigrationInterface;
 }

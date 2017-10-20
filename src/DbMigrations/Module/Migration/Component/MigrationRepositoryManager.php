@@ -9,6 +9,7 @@ use DbMigrations\Kernel\Component\DbConnectionInterface;
 use DbMigrations\Kernel\Util\LoggerTrait;
 use DbMigrations\Module\Migration\Dao\MigrationStatusRepository;
 use DbMigrations\Module\Migration\Dao\MigrationStatusRepositoryInterface;
+use DbMigrations\Module\Migration\Enum\MigrationType;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 
@@ -32,53 +33,48 @@ class MigrationRepositoryManager implements MigrationRepositoryManagerInterface
      * @var Filesystem
      */
     private $filesystem;
-    /**
-     * @var string
-     */
-    private $type;
 
     /**
      * MigrationRepositoryManager constructor.
      *
      * @param DbConnectionInterface $dbConnection
      * @param Filesystem $filesystem
-     * @param string $type
      * @param LoggerInterface|null $logger
      */
     public function __construct(
         DbConnectionInterface $dbConnection,
         Filesystem $filesystem,
-        string $type,
         LoggerInterface $logger = null
     ) {
         $this->setLogger($logger);
 
         $this->dbConnection = $dbConnection;
         $this->filesystem = $filesystem;
-        $this->type = $type;
     }
 
     /**
      * Get existed or generate new migration repository for each variant of params
      *
      * @param string $dbName
+     * @param MigrationType $type
      * @return MigrationStatusRepositoryInterface
      */
-    public function get(string $dbName): MigrationStatusRepositoryInterface
+    public function get(string $dbName, MigrationType $type): MigrationStatusRepositoryInterface
     {
         if ($dbName === "") {
             throw new EmptyStringException("dbName");
         }
 
-        if (array_key_exists($dbName, $this->repositoryList) === false) {
-            $this->repositoryList[$dbName] = new MigrationStatusRepository(
+        $key = "{$dbName}_{$type->getValue()}";
+        if (array_key_exists($key, $this->repositoryList) === false) {
+            $this->repositoryList[$key] = new MigrationStatusRepository(
                 $this->dbConnection->getConnection($dbName),
                 $this->filesystem,
-                $this->type,
+                $type,
                 $this->getLogger()
             );
         }
 
-        return $this->repositoryList[$dbName];
+        return $this->repositoryList[$key];
     }
 }

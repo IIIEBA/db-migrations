@@ -8,6 +8,7 @@ use DbMigrations\Kernel\Component\DbConnectionInterface;
 use DbMigrations\Kernel\Exception\GeneralException;
 use DbMigrations\Kernel\Model\GeneralConfigInterface;
 use DbMigrations\Kernel\Util\LoggerTrait;
+use DbMigrations\Module\Migration\Enum\MigrationType;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Filesystem\Filesystem;
 
@@ -36,10 +37,6 @@ class MigrationBuilder implements MigrationBuilderInterface
      * @var Filesystem
      */
     private $filesystem;
-    /**
-     * @var string
-     */
-    private $migrationFolderPath;
 
     /**
      * MigrationBuilder constructor.
@@ -54,7 +51,6 @@ class MigrationBuilder implements MigrationBuilderInterface
         GeneralConfigInterface $config,
         DbConnectionInterface $dbConnection,
         Filesystem $filesystem,
-        string $migrationFolderName,
         LoggerInterface $logger = null
     ) {
         $this->setLogger($logger);
@@ -62,7 +58,6 @@ class MigrationBuilder implements MigrationBuilderInterface
         $this->config = $config;
         $this->dbConnection = $dbConnection;
         $this->filesystem = $filesystem;
-        $this->migrationFolderPath = PROJECT_ROOT . $config->getDbFolderPath() . trim($migrationFolderName, "/") . "/";
     }
 
     /**
@@ -70,12 +65,16 @@ class MigrationBuilder implements MigrationBuilderInterface
      *
      * @param string $dbName
      * @param string $name
-     * @return mixed
+     * @param MigrationType $type
+     * @return MigrationInterface
      * @throws GeneralException
      */
-    public function buildMigration(string $dbName, string $name): MigrationInterface
-    {
-        $migrationPath = $this->migrationFolderPath . "{$dbName}/{$name}";
+    public function buildMigration(
+        string $dbName,
+        string $name,
+        MigrationType $type
+    ): MigrationInterface {
+        $migrationPath = $this->getMigrationFolderPath($dbName, $type) . "{$name}";
         if ($this->filesystem->exists($migrationPath) === false) {
             throw new GeneralException("Requested migration file - [{$name}] was not found in db - [{$dbName}]");
         }
@@ -129,5 +128,15 @@ class MigrationBuilder implements MigrationBuilderInterface
         $className = end($namespaceMatches) . "\\" . end($nameMatches);
 
         return $className;
+    }
+
+    /**
+     * @param string $dbName
+     * @param MigrationType $type
+     * @return string
+     */
+    public function getMigrationFolderPath(string $dbName, MigrationType $type)
+    {
+        return PROJECT_ROOT . $this->config->getDbFolderPath() . "{$type->getValue()}/{$dbName}/";
     }
 }

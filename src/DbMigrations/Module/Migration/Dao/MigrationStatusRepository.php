@@ -8,6 +8,7 @@ use BaseExceptions\Exception\InvalidArgument\NotPositiveNumericException;
 use DbMigrations\Kernel\Exception\GeneralException;
 use DbMigrations\Kernel\Util\LoggerTrait;
 use DbMigrations\Module\Migration\Enum\MigrationStatusType;
+use DbMigrations\Module\Migration\Enum\MigrationType;
 use DbMigrations\Module\Migration\Map\MigrationStatusMapper;
 use DbMigrations\Module\Migration\Model\MigrationStatusInterface;
 use PDO;
@@ -59,20 +60,20 @@ class MigrationStatusRepository implements MigrationStatusRepositoryInterface
      *
      * @param PDO $connection
      * @param Filesystem $filesystem
-     * @param string $type
+     * @param MigrationType $type
      * @param LoggerInterface|null $logger
      */
     public function __construct(
         PDO $connection,
         Filesystem $filesystem,
-        string $type,
+        MigrationType $type,
         LoggerInterface $logger = null
     ) {
         $this->setLogger($logger);
 
         $this->connection = $connection;
         $this->filesystem = $filesystem;
-        $this->tableName = "_db_" . $type;
+        $this->tableName = "_db_" . $type->getValue();
         $this->dbTableTemplatePath = __DIR__ . "/../Template/dbMigrationStatusTable.txt";
 
         $this->mapper = new MigrationStatusMapper();

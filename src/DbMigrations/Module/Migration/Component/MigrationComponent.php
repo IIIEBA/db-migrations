@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace DbMigrations\Module\Migration\Component;
 
+use BaseExceptions\Exception\InvalidArgument\EmptyStringException;
 use BaseExceptions\Exception\LogicException\NotImplementedException;
 use DbMigrations\Kernel\Component\DbConnectionInterface;
 use DbMigrations\Kernel\Model\GeneralConfigInterface;
 use DbMigrations\Kernel\Util\LoggerTrait;
 use DbMigrations\Kernel\Util\StdInHelper;
 use DbMigrations\Module\Migration\Enum\MigrationType;
+use DbMigrations\Module\Migration\Model\MigrationStatus;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Filesystem;
@@ -23,6 +25,7 @@ class MigrationComponent implements MigrationComponentInterface
     use LoggerTrait;
 
     const DEFAULT_FOLDER_PERMISSIONS = 0755;
+    const CLASS_NAME_REGEXP = "/Migration_(\d+)_([a-zA-Z0-9]+)(\.php)*$/";
 
     /**
      * @var GeneralConfigInterface
@@ -45,37 +48,17 @@ class MigrationComponent implements MigrationComponentInterface
      */
     private $stdInHelper;
     /**
-     * @var string
+     * @var MigrationRepositoryManagerInterface
      */
-    private $migrationFolderPath;
-    /**
-     * @var string
-     */
-    private $dataFolderPath;
+    private $migrationRepositoryManager;
     /**
      * @var MigrationBuilderInterface
      */
-    private $structureMigrationBuilder;
-    /**
-     * @var MigrationBuilderInterface
-     */
-    private $dataMigrationBuilder;
+    private $migrationBuilder;
     /**
      * @var MigrationGeneratorInterface
      */
-    private $structureMigrationGenerator;
-    /**
-     * @var MigrationGeneratorInterface
-     */
-    private $dataMigrationGenerator;
-    /**
-     * @var MigrationRepositoryManagerInterface
-     */
-    private $structureRepositoryManager;
-    /**
-     * @var MigrationRepositoryManagerInterface
-     */
-    private $dataRepositoryManager;
+    private $migrationGenerator;
 
     /**
      * MigrationComponent constructor.
@@ -85,12 +68,9 @@ class MigrationComponent implements MigrationComponentInterface
      * @param Filesystem $filesystem
      * @param OutputInterface $output
      * @param StdInHelper $stdInHelper
-     * @param MigrationBuilderInterface $structureMigrationBuilder
-     * @param MigrationBuilderInterface $dataMigrationBuilder
-     * @param MigrationGeneratorInterface $structureMigrationGenerator
-     * @param MigrationGeneratorInterface $dataMigrationGenerator
-     * @param MigrationRepositoryManagerInterface $structureRepositoryManager
-     * @param MigrationRepositoryManagerInterface $dataRepositoryManager
+     * @param MigrationBuilderInterface $migrationBuilder
+     * @param MigrationGeneratorInterface $migrationGenerator
+     * @param MigrationRepositoryManagerInterface $migrationRepositoryManager
      * @param LoggerInterface|null $logger
      */
     public function __construct(
@@ -99,12 +79,9 @@ class MigrationComponent implements MigrationComponentInterface
         Filesystem $filesystem,
         OutputInterface $output,
         StdInHelper $stdInHelper,
-        MigrationBuilderInterface $structureMigrationBuilder,
-        MigrationBuilderInterface $dataMigrationBuilder,
-        MigrationGeneratorInterface $structureMigrationGenerator,
-        MigrationGeneratorInterface $dataMigrationGenerator,
-        MigrationRepositoryManagerInterface $structureRepositoryManager,
-        MigrationRepositoryManagerInterface $dataRepositoryManager,
+        MigrationBuilderInterface $migrationBuilder,
+        MigrationGeneratorInterface $migrationGenerator,
+        MigrationRepositoryManagerInterface $migrationRepositoryManager,
         LoggerInterface $logger = null
     ) {
         $this->setLogger($logger);
@@ -114,15 +91,9 @@ class MigrationComponent implements MigrationComponentInterface
         $this->filesystem = $filesystem;
         $this->output = $output;
         $this->stdInHelper = $stdInHelper;
-        $this->structureMigrationBuilder = $structureMigrationBuilder;
-        $this->dataMigrationBuilder = $dataMigrationBuilder;
-        $this->structureMigrationGenerator = $structureMigrationGenerator;
-        $this->dataMigrationGenerator = $dataMigrationGenerator;
-        $this->structureRepositoryManager = $structureRepositoryManager;
-        $this->dataRepositoryManager = $dataRepositoryManager;
-
-        $this->migrationFolderPath = PROJECT_ROOT . $config->getDbFolderPath() . MigrationType::STRUCTURE . "/";
-        $this->dataFolderPath = PROJECT_ROOT . $config->getDbFolderPath() . MigrationType::DATA . "/";
+        $this->migrationBuilder = $migrationBuilder;
+        $this->migrationGenerator = $migrationGenerator;
+        $this->migrationRepositoryManager = $migrationRepositoryManager;
     }
 
     /**
@@ -141,14 +112,11 @@ class MigrationComponent implements MigrationComponentInterface
         bool $isHeavyMigration = false,
         string $schemaName = null
     ): void {
-        $migrationGenerator = $type->isEquals(MigrationType::STRUCTURE)
-            ? $this->structureMigrationGenerator : $this->dataMigrationGenerator;
+        // Check database
+        $this->migrationRepositoryManager->get($dbName, $type)->checkDatabase();
 
-        $migrationRepository = $type->isEquals(MigrationType::STRUCTURE)
-            ? $this->structureRepositoryManager : $this->dataRepositoryManager;
-
-        $migrationRepository->get($dbName)->checkDatabase();
-        $name = $migrationGenerator->generateMigration($dbName, $name, $isHeavyMigration);
+        // Create new migration
+        $name = $this->migrationGenerator->generateMigration($dbName, $name, $type, $isHeavyMigration);
 
         $this->output->writeln("New <comment>{$type->getValue()}</comment> migration in database"
             . " <comment>{$dbName}</comment> was successfully created with name - <comment>{$name}</comment>");
@@ -201,6 +169,104 @@ class MigrationComponent implements MigrationComponentInterface
         string $dbName = null,
         string $migrationId = null
     ): void {
-        throw new NotImplementedException();
+
+        $test = $this->getMigrationsStatusList($dbName, $type);
+        print_r($test);
+    }
+
+    /**
+     * Get migration status list
+     *
+     * @param string $dbName
+     * @param MigrationType $type
+     * @return MigrationStatus[] # with migration id like key
+     */
+    public function getMigrationsStatusList(string $dbName, MigrationType $type): array
+    {
+        if ($dbName === "") {
+            throw new EmptyStringException("dbName");
+        }
+
+        $result = [];
+        $folderPath = $this->getMigrationFolderPath($dbName, $type);
+        $migrationRepository = $this->migrationRepositoryManager->get($dbName, $type);
+
+        $appliedMigrationsList = $migrationRepository->findMigrations();
+        foreach ($appliedMigrationsList as $item) {
+            $result[$item->getMigrationId()] = $item;
+        }
+
+        $fileList = dir($folderPath);
+        while (($name = $fileList->read()) !== false) {
+            $filePath = $folderPath . $name;
+
+            if (in_array($name, [".", ".."]) || is_file($filePath) === false) {
+                continue;
+            }
+
+            $migrationId = $this->getParsedId($name);
+            if (array_key_exists($migrationId, $result) === false) {
+                $result[$migrationId] = new MigrationStatus(
+                    $migrationId,
+                    $this->getParsedName($name)
+                );
+            }
+        }
+
+        krsort($result);
+
+        return $result;
+    }
+
+    /**
+     * @param string $dbName
+     * @param MigrationType $type
+     * @return string
+     */
+    public function getMigrationFolderPath(string $dbName, MigrationType $type)
+    {
+        if ($dbName === "") {
+            throw new EmptyStringException("dbName");
+        }
+
+        return PROJECT_ROOT . $this->config->getDbFolderPath() . "{$type->getValue()}/{$dbName}/";
+    }
+
+    /**
+     * Get parsed migration filename
+     *
+     * @param string $name
+     * @return string[]
+     */
+    public function getParsedFilename(string $name): array
+    {
+        if ($name === "") {
+            throw new EmptyStringException("name");
+        }
+
+        preg_match(self::CLASS_NAME_REGEXP, $name, $matches);
+        if (count($matches) < 3) {
+            throw new \InvalidArgumentException("Invalid class name was given - {$name}");
+        }
+
+        return $matches;
+    }
+
+    /**
+     * @param string $name
+     * @return string
+     */
+    final public function getParsedId(string $name): string
+    {
+        return $this->getParsedFilename($name)[1];
+    }
+
+    /**
+     * @param string $name
+     * @return string
+     */
+    final public function getParsedName(string $name): string
+    {
+        return $this->getParsedFilename($name)[2];
     }
 }
