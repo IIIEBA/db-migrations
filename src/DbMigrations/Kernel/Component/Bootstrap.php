@@ -110,6 +110,7 @@ class Bootstrap
     {
         $this->setLogger($logger);
         $this->filesystem = new Filesystem();
+        $this->output = new ConsoleOutput();
 
         // Check config file
         $configPath = PROJECT_ROOT . self::CONFIG_PATH;
@@ -130,7 +131,6 @@ class Bootstrap
     {
         $this->application = new Application("DB-Migration");
         $this->input = new ArgvInput();
-        $this->output = new ConsoleOutput();
         $this->yaml = new Yaml();
         $this->stdInHelper = new StdInHelper($this->output);
         $this->dbConnection = new DbConnection($this->getLogger());
