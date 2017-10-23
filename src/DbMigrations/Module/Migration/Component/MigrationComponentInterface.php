@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace DbMigrations\Module\Migration\Component;
 
 use DbMigrations\Module\Migration\Enum\MigrationType;
+use DbMigrations\Module\Migration\Model\MigrationStatusInterface;
 
 /**
  * Class MigrationComponent
@@ -20,6 +21,7 @@ interface MigrationComponentInterface
      * @param MigrationType $type
      * @param bool $isHeavyMigration
      * @param string|null $schemaName
+     * @return string
      */
     public function createMigration(
         string $dbName,
@@ -27,7 +29,7 @@ interface MigrationComponentInterface
         MigrationType $type,
         bool $isHeavyMigration = false,
         string $schemaName = null
-    ): void;
+    ): string;
 
     /**
      * Migrate to selected migration or only selected migration
@@ -65,10 +67,11 @@ interface MigrationComponentInterface
      * @param MigrationType $type
      * @param string|null $dbName
      * @param string|null $migrationId
+     * @return MigrationStatusInterface[]
      */
     public function migrationsStatus(
         MigrationType $type,
         string $dbName = null,
         string $migrationId = null
-    ): void;
+    ): array;
 }

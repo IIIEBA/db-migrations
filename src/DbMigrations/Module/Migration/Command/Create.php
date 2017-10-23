@@ -55,12 +55,17 @@ class Create extends AbstractMigrationCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $this->getMigrationComponent()->createMigration(
-            $input->getArgument("db-name"),
+        $dbName = $input->getArgument("db-name");
+        $migrationName = $this->getMigrationComponent()->createMigration(
+            $dbName,
             $input->getArgument("migration-name"),
             new MigrationType(MigrationType::STRUCTURE),
             $input->getOption("is-heavy-migration"),
             $input->getOption("schema-name")
         );
+
+        $output->writeln("New <comment>" . MigrationType::STRUCTURE . "</comment> migration in database"
+            . " <comment>{$dbName}</comment> was successfully created with name - <comment>{$migrationName}</comment>");
+        $output->writeln("");
     }
 }

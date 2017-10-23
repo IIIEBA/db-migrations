@@ -11,7 +11,9 @@ use DbMigrations\Kernel\Model\GeneralConfigInterface;
 use DbMigrations\Kernel\Util\LoggerTrait;
 use DbMigrations\Kernel\Util\StdInHelper;
 use DbMigrations\Module\Migration\Enum\MigrationType;
+use DbMigrations\Module\Migration\Model\DatabaseStatus;
 use DbMigrations\Module\Migration\Model\MigrationStatus;
+use DbMigrations\Module\Migration\Model\MigrationStatusInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Filesystem\Filesystem;
@@ -104,6 +106,7 @@ class MigrationComponent implements MigrationComponentInterface
      * @param MigrationType $type
      * @param bool $isHeavyMigration
      * @param string|null $schemaName
+     * @return string
      */
     public function createMigration(
         string $dbName,
@@ -111,16 +114,11 @@ class MigrationComponent implements MigrationComponentInterface
         MigrationType $type,
         bool $isHeavyMigration = false,
         string $schemaName = null
-    ): void {
+    ): string {
         // Check database
         $this->migrationRepositoryManager->get($dbName, $type)->checkDatabase();
 
-        // Create new migration
-        $name = $this->migrationGenerator->generateMigration($dbName, $name, $type, $isHeavyMigration);
-
-        $this->output->writeln("New <comment>{$type->getValue()}</comment> migration in database"
-            . " <comment>{$dbName}</comment> was successfully created with name - <comment>{$name}</comment>");
-        $this->output->writeln("");
+        return $this->migrationGenerator->generateMigration($dbName, $name, $type, $isHeavyMigration);
     }
 
     /**
@@ -163,15 +161,50 @@ class MigrationComponent implements MigrationComponentInterface
      * @param MigrationType $type
      * @param string|null $dbName
      * @param string|null $migrationId
+     * @return MigrationStatusInterface[]
      */
     public function migrationsStatus(
         MigrationType $type,
         string $dbName = null,
         string $migrationId = null
-    ): void {
+    ): array {
+        $result = [];
 
-        $test = $this->getMigrationsStatusList($dbName, $type);
-        print_r($test);
+        $dbList = $dbName === null ? $this->getDatabasesWithMigrations($type) : [$dbName];
+        foreach ($dbList as $name) {
+            $result[] = new DatabaseStatus(
+                $name,
+                $type,
+                $this->getMigrationsStatusList($name, $type)
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get list of databases with migrations
+     *
+     * @param MigrationType $type
+     * @return string[]
+     */
+    public function getDatabasesWithMigrations(MigrationType $type): array
+    {
+        $result = [];
+
+        $folderPath = $this->getMigrationFolderPath($type);
+        $fileList = dir($folderPath);
+        while (($name = $fileList->read()) !== false) {
+            $filePath = $folderPath . $name;
+
+            if (in_array($name, [".", ".."]) || is_dir($filePath) === false) {
+                continue;
+            }
+
+            $result[] = $name;
+        }
+
+        return $result;
     }
 
     /**
@@ -179,7 +212,7 @@ class MigrationComponent implements MigrationComponentInterface
      *
      * @param string $dbName
      * @param MigrationType $type
-     * @return MigrationStatus[] # with migration id like key
+     * @return MigrationStatusInterface[] # with migration id like key
      */
     public function getMigrationsStatusList(string $dbName, MigrationType $type): array
     {
@@ -188,7 +221,7 @@ class MigrationComponent implements MigrationComponentInterface
         }
 
         $result = [];
-        $folderPath = $this->getMigrationFolderPath($dbName, $type);
+        $folderPath = $this->getMigrationFolderPath($type, $dbName);
         $migrationRepository = $this->migrationRepositoryManager->get($dbName, $type);
 
         $appliedMigrationsList = $migrationRepository->findMigrations();
@@ -215,21 +248,22 @@ class MigrationComponent implements MigrationComponentInterface
 
         krsort($result);
 
-        return $result;
+        return array_values($result);
     }
 
     /**
-     * @param string $dbName
      * @param MigrationType $type
+     * @param string|null $dbName
      * @return string
      */
-    public function getMigrationFolderPath(string $dbName, MigrationType $type)
+    public function getMigrationFolderPath(MigrationType $type, string $dbName = null)
     {
         if ($dbName === "") {
             throw new EmptyStringException("dbName");
         }
 
-        return PROJECT_ROOT . $this->config->getDbFolderPath() . "{$type->getValue()}/{$dbName}/";
+        return PROJECT_ROOT . $this->config->getDbFolderPath() . "{$type->getValue()}/"
+            . ($dbName !== null ? "{$dbName}/" : "");
     }
 
     /**

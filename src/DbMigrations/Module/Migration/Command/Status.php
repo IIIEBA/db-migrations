@@ -41,10 +41,12 @@ class Status extends AbstractMigrationCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $this->getMigrationComponent()->migrationsStatus(
+        $status = $this->getMigrationComponent()->migrationsStatus(
             new MigrationType(MigrationType::STRUCTURE),
             $input->getArgument("db-name"),
             $input->getArgument("migration-id")
         );
+
+        print_r($status);
     }
 }
