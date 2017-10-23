@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace DbMigrations\Module\Migration\Component;
 
 use DbMigrations\Module\Migration\Enum\MigrationType;
-use DbMigrations\Module\Migration\Model\MigrationStatusInterface;
+use DbMigrations\Module\Migration\Model\DatabaseStatusInterface;
 
 /**
  * Class MigrationComponent
@@ -67,7 +67,7 @@ interface MigrationComponentInterface
      * @param MigrationType $type
      * @param string|null $dbName
      * @param string|null $migrationId
-     * @return MigrationStatusInterface[]
+     * @return DatabaseStatusInterface[]
      */
     public function migrationsStatus(
         MigrationType $type,

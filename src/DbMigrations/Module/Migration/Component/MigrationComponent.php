@@ -12,6 +12,7 @@ use DbMigrations\Kernel\Util\LoggerTrait;
 use DbMigrations\Kernel\Util\StdInHelper;
 use DbMigrations\Module\Migration\Enum\MigrationType;
 use DbMigrations\Module\Migration\Model\DatabaseStatus;
+use DbMigrations\Module\Migration\Model\DatabaseStatusInterface;
 use DbMigrations\Module\Migration\Model\MigrationStatus;
 use DbMigrations\Module\Migration\Model\MigrationStatusInterface;
 use Psr\Log\LoggerInterface;
@@ -161,7 +162,7 @@ class MigrationComponent implements MigrationComponentInterface
      * @param MigrationType $type
      * @param string|null $dbName
      * @param string|null $migrationId
-     * @return MigrationStatusInterface[]
+     * @return DatabaseStatusInterface[]
      */
     public function migrationsStatus(
         MigrationType $type,
@@ -246,7 +247,7 @@ class MigrationComponent implements MigrationComponentInterface
             }
         }
 
-        krsort($result);
+        ksort($result);
 
         return array_values($result);
     }

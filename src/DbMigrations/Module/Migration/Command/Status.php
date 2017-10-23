@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace DbMigrations\Module\Migration\Command;
 
+use DbMigrations\Module\Migration\Enum\MigrationStatusType;
 use DbMigrations\Module\Migration\Enum\MigrationType;
+use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -47,6 +49,35 @@ class Status extends AbstractMigrationCommand
             $input->getArgument("migration-id")
         );
 
-        print_r($status);
+        foreach ($status as $db) {
+            $output->writeln(
+                "<bg=white;fg=black> --- Database '{$db->getName()}' --- </>"
+            );
+
+            $table = new Table($output);
+            $table->setHeaders([
+                "Migration ID",
+                "Name",
+                "Status",
+                "Started At",
+                "Applied At",
+            ]);
+
+            foreach ($db->getMigrationStatusList() as $migration) {
+                $table->addRow([
+                    $migration->getMigrationId(),
+                    $migration->getName(),
+                    ($migration->getType()->isEquals(MigrationStatusType::NEW) ? "<fg=red>" : "<fg=green>")
+                        . (strtoupper($migration->getType()->getValue()) . "</>"),
+                    $migration->getType()->isEquals(MigrationStatusType::APPLIED)
+                        ? date("Y-m-d H:i:s", intval($migration->getStartedAt())) : "-",
+                    $migration->getType()->isEquals(MigrationStatusType::APPLIED)
+                        ? date("Y-m-d H:i:s", intval($migration->getAppliedAt())) : "-",
+                ]);
+            }
+
+            $table->render();
+            $output->writeln("");
+        }
     }
 }
