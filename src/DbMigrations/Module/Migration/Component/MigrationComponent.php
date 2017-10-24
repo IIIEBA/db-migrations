@@ -136,9 +136,10 @@ class MigrationComponent implements MigrationComponentInterface
         string $migrationId = null,
         bool $onlySingle = false
     ): void {
+        $prefix = "    ";
         $dbList = $dbName === null ? $this->getDatabasesWithMigrations($type) : [$dbName];
         if (count($dbList) === 0) {
-            $this->output->writeln("<comment>No migrations was found</comment>");
+            $this->output->writeln("{$prefix}No <comment>{$type->getValue()}</comment> migrations was found");
 
             return;
         }
@@ -162,7 +163,8 @@ class MigrationComponent implements MigrationComponentInterface
                     $migration = $this->migrationBuilder->buildMigration($db, $item->getFilename(), $type);
 
                     $this->output->write(
-                        "Starting to apply migration <comment>{$migration->getId()}</comment> ..."
+                        "{$prefix}Applying <comment>{$type->getValue()}</comment> migration <comment>"
+                            . "{$migration->getId()}</comment>"
                     );
 
                     $startedAt = microtime(true);
@@ -181,14 +183,18 @@ class MigrationComponent implements MigrationComponentInterface
                     );
 
                     $this->output->writeln(
-                        " <fg=green>DONE</>"
+                        " - <fg=green>DONE</>"
                     );
                 }
             }
 
             if ($migrationsCount === 0) {
-                $this->output->writeln("<fg=green>No new migrations was found</>");
+                $this->output->writeln(
+                    "{$prefix}<fg=green>No new <comment>{$type->getValue()}</comment> migrations was found</>"
+                );
             }
+
+            $this->output->writeln("");
         }
     }
 
@@ -206,6 +212,7 @@ class MigrationComponent implements MigrationComponentInterface
         MigrationType $type,
         bool $onlySingle = false
     ): void {
+        $prefix = "    ";
         $this->output->writeln(
             "<bg=white;fg=black> --- Database '{$dbName}' --- </>"
         );
@@ -225,7 +232,8 @@ class MigrationComponent implements MigrationComponentInterface
                 $migration = $this->migrationBuilder->buildMigration($dbName, $item->getFilename(), $type);
 
                 $this->output->write(
-                    "Starting to rollback migration <comment>{$migration->getId()}</comment> ..."
+                    "{$prefix}Rolling back <comment>{$type->getValue()}</comment> migration <comment>"
+                        . "{$migration->getId()}</comment>"
                 );
 
                 $migration->down();
@@ -233,14 +241,18 @@ class MigrationComponent implements MigrationComponentInterface
                 $this->migrationRepositoryManager->get($dbName, $type)->delete($item->getMigrationId());
 
                 $this->output->writeln(
-                    " <fg=green>DONE</>"
+                    " - <fg=green>DONE</>"
                 );
             }
         }
 
         if ($migrationsCount === 0) {
-            $this->output->writeln("<fg=green>No migrations for rollback was found</>");
+            $this->output->writeln(
+                "{$prefix}<fg=green>No <comment>{$type->getValue()}</comment> migrations for rollback was found</>"
+            );
         }
+
+        $this->output->writeln("");
     }
 
     /**
