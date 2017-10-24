@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace DbMigrations\Module\Migration\Dao;
 
+use BaseExceptions\Exception\InvalidArgument\EmptyStringException;
 use BaseExceptions\Exception\InvalidArgument\NotPositiveNumericException;
 use DbMigrations\Kernel\Exception\GeneralException;
 use DbMigrations\Kernel\Util\LoggerTrait;
@@ -116,7 +117,14 @@ class MigrationStatusRepository implements MigrationStatusRepositoryInterface
             PDO::FETCH_ASSOC
         );
 
-        return count($rawData) === 1 ? reset($rawData) : null;
+        $result = null;
+        if (count($rawData) === 1) {
+            $data = reset($rawData);
+            $data["type"] = MigrationStatusType::APPLIED;
+            $result = $this->mapper->convertToObject($data);
+        }
+
+        return $result;
     }
 
     /**
@@ -165,8 +173,8 @@ class MigrationStatusRepository implements MigrationStatusRepositoryInterface
             // Create new row
             $this->exec(
                 "INSERT INTO `{$this->tableName}`"
-                    . "VALUES('migrationId', 'name', 'startedAt', 'appliedAt')"
-                    . "(:migrationId, :name, :startedAt, :appliedAt)",
+                    . " (`migrationId`, `name`, `startedAt`, `appliedAt`) VALUES"
+                    . " (:migrationId, :name, :startedAt, :appliedAt)",
                 [
                     "migrationId" => $object->getMigrationId(),
                     "name" => $object->getName(),
@@ -182,6 +190,23 @@ class MigrationStatusRepository implements MigrationStatusRepositoryInterface
         }
 
         return $row;
+    }
+
+    /**
+     * Delete migration by id
+     *
+     * @param string $migrationId
+     */
+    public function delete(string $migrationId): void
+    {
+        if ($migrationId === "") {
+            throw new EmptyStringException("migrationId");
+        }
+
+        $this->exec(
+            "DELETE FROM `{$this->tableName}` WHERE `migrationId` = :migrationId LIMIT 1",
+            ["migrationId" => $migrationId]
+        );
     }
 
     /**

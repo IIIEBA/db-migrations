@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace DbMigrations\Module\Migration\Component;
 
 use BaseExceptions\Exception\InvalidArgument\EmptyStringException;
-use BaseExceptions\Exception\LogicException\NotImplementedException;
 use DbMigrations\Kernel\Component\DbConnectionInterface;
 use DbMigrations\Kernel\Model\GeneralConfigInterface;
 use DbMigrations\Kernel\Util\LoggerTrait;
 use DbMigrations\Kernel\Util\StdInHelper;
+use DbMigrations\Module\Migration\Enum\MigrationStatusType;
 use DbMigrations\Module\Migration\Enum\MigrationType;
 use DbMigrations\Module\Migration\Model\DatabaseStatus;
 use DbMigrations\Module\Migration\Model\DatabaseStatusInterface;
@@ -136,7 +136,60 @@ class MigrationComponent implements MigrationComponentInterface
         string $migrationId = null,
         bool $onlySingle = false
     ): void {
-        throw new NotImplementedException();
+        $dbList = $dbName === null ? $this->getDatabasesWithMigrations($type) : [$dbName];
+        if (count($dbList) === 0) {
+            $this->output->writeln("<comment>No migrations was found</comment>");
+
+            return;
+        }
+
+        foreach ($dbList as $db) {
+            $this->output->writeln(
+                "<bg=white;fg=black> --- Database '{$db}' --- </>"
+            );
+
+            $migrationsCount = 0;
+            $migrationsList = $this->getMigrationsStatusList($db, $type);
+            if (count($migrationsList) > 1) {
+                foreach ($migrationsList as $item) {
+                    if ($item->getType()->isEquals(MigrationStatusType::APPLIED)
+                        || $this->isNeedToSkipMigration($item->getMigrationId(), $migrationId, $onlySingle)
+                    ) {
+                        continue;
+                    }
+
+                    $migrationsCount++;
+                    $migration = $this->migrationBuilder->buildMigration($db, $item->getFilename(), $type);
+
+                    $this->output->write(
+                        "Starting to apply migration <comment>{$migration->getId()}</comment> ..."
+                    );
+
+                    $startedAt = microtime(true);
+                    $migration->up();
+                    $appliedAt = microtime(true);
+
+                    $this->migrationRepositoryManager->get($db, $type)->store(
+                        new MigrationStatus(
+                            $migration->getId(),
+                            $migration->getName(),
+                            null,
+                            null,
+                            $startedAt,
+                            $appliedAt
+                        )
+                    );
+
+                    $this->output->writeln(
+                        " <fg=green>DONE</>"
+                    );
+                }
+            }
+
+            if ($migrationsCount === 0) {
+                $this->output->writeln("<fg=green>No new migrations was found</>");
+            }
+        }
     }
 
     /**
@@ -153,7 +206,41 @@ class MigrationComponent implements MigrationComponentInterface
         MigrationType $type,
         bool $onlySingle = false
     ): void {
-        throw new NotImplementedException();
+        $this->output->writeln(
+            "<bg=white;fg=black> --- Database '{$dbName}' --- </>"
+        );
+
+        $migrationsCount = 0;
+        $migrationsList = $this->getMigrationsStatusList($dbName, $type);
+        if (count($migrationsList) > 1) {
+            krsort($migrationsList);
+            foreach ($migrationsList as $item) {
+                if ($item->getType()->isEquals(MigrationStatusType::NEW)
+                    || $this->isNeedToSkipMigration($item->getMigrationId(), $migrationId, $onlySingle, true)
+                ) {
+                    continue;
+                }
+
+                $migrationsCount++;
+                $migration = $this->migrationBuilder->buildMigration($dbName, $item->getFilename(), $type);
+
+                $this->output->write(
+                    "Starting to rollback migration <comment>{$migration->getId()}</comment> ..."
+                );
+
+                $migration->down();
+
+                $this->migrationRepositoryManager->get($dbName, $type)->delete($item->getMigrationId());
+
+                $this->output->writeln(
+                    " <fg=green>DONE</>"
+                );
+            }
+        }
+
+        if ($migrationsCount === 0) {
+            $this->output->writeln("<fg=green>No migrations for rollback was found</>");
+        }
     }
 
     /**
@@ -178,6 +265,35 @@ class MigrationComponent implements MigrationComponentInterface
                 $type,
                 $this->getMigrationsStatusList($name, $type)
             );
+        }
+
+        return $result;
+    }
+
+    /**
+     * Check is we need to skip current migration
+     *
+     * @param string $currentId
+     * @param string|null $selected
+     * @param bool $onlySingle
+     * @param bool $isRollback
+     * @return bool
+     */
+    public function isNeedToSkipMigration(
+        string $currentId,
+        string $selected = null,
+        bool $onlySingle = false,
+        bool $isRollback = false
+    ): bool {
+        $result = false;
+
+        $idDiff = $isRollback ? ($currentId < $selected) : ($currentId > $selected);
+        if ($selected !== null) {
+            if (($onlySingle === false && $idDiff)
+                || ($onlySingle === true && $currentId !== $selected)
+            ) {
+                $result = true;
+            }
         }
 
         return $result;
@@ -242,7 +358,8 @@ class MigrationComponent implements MigrationComponentInterface
             if (array_key_exists($migrationId, $result) === false) {
                 $result[$migrationId] = new MigrationStatus(
                     $migrationId,
-                    $this->getParsedName($name)
+                    $this->getParsedName($name),
+                    $name
                 );
             }
         }
@@ -263,8 +380,14 @@ class MigrationComponent implements MigrationComponentInterface
             throw new EmptyStringException("dbName");
         }
 
-        return PROJECT_ROOT . $this->config->getDbFolderPath() . "{$type->getValue()}/"
+        $path = PROJECT_ROOT . $this->config->getDbFolderPath() . "{$type->getValue()}/"
             . ($dbName !== null ? "{$dbName}/" : "");
+
+        if ($this->filesystem->exists($path) === false) {
+            $this->filesystem->mkdir($path, self::DEFAULT_FOLDER_PERMISSIONS);
+        }
+
+        return $path;
     }
 
     /**

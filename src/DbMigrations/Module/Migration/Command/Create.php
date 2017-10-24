@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace DbMigrations\Module\Migration\Command;
 
-use DbMigrations\Module\Migration\Enum\MigrationType;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -21,7 +20,7 @@ class Create extends AbstractMigrationCommand
      */
     protected function configure()
     {
-        $this->setName("structure:create");
+        $this->setName("{$this->getType()->getValue()}:create");
         $this->setDescription("Create migration file");
         $this->addArgument(
             "db-name",
@@ -59,12 +58,12 @@ class Create extends AbstractMigrationCommand
         $migrationName = $this->getMigrationComponent()->createMigration(
             $dbName,
             $input->getArgument("migration-name"),
-            new MigrationType(MigrationType::STRUCTURE),
+            $this->getType(),
             $input->getOption("is-heavy-migration"),
             $input->getOption("schema-name")
         );
 
-        $output->writeln("New <comment>" . MigrationType::STRUCTURE . "</comment> migration in database"
+        $output->writeln("New <comment>{$this->getType()->getValue()}</comment> migration in database"
             . " <comment>{$dbName}</comment> was successfully created with name - <comment>{$migrationName}</comment>");
         $output->writeln("");
     }

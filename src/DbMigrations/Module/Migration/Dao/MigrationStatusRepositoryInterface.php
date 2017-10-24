@@ -29,6 +29,13 @@ interface MigrationStatusRepositoryInterface
     public function store(MigrationStatusInterface $object): MigrationStatusInterface;
 
     /**
+     * Delete migration by id
+     *
+     * @param string $migrationId
+     */
+    public function delete(string $migrationId): void;
+
+    /**
      * Check is we get connection with selected database
      *
      * @throws GeneralException

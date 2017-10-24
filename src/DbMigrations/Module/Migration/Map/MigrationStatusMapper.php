@@ -31,6 +31,7 @@ class MigrationStatusMapper implements HashMapInterface
         return [
             "migrationId" => $object->getMigrationId(),
             "name" => $object->getName(),
+            "filename" => $object->getFilename(),
             "type" => $object->getType()->getValue(),
             "startedAt" => $object->getStartedAt(),
             "appliedAt" => $object->getAppliedAt(),
@@ -49,7 +50,8 @@ class MigrationStatusMapper implements HashMapInterface
         return new MigrationStatus(
             $map["migrationId"],
             $map["name"],
-            new MigrationStatusType($map["type"]),
+            array_key_exists("filename", $map) ? $map["filename"] : null,
+            array_key_exists("type", $map) ? new MigrationStatusType($map["type"]) : null,
             $map["startedAt"] !== null ? floatval($map["startedAt"]) : null,
             $map["appliedAt"] !== null ? floatval($map["appliedAt"]) : null,
             $map["id"] !== null ? intval($map["id"]) : null

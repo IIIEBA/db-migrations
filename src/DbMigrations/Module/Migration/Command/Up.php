@@ -20,7 +20,7 @@ class Up extends AbstractMigrationCommand
      */
     protected function configure()
     {
-        $this->setName("structure:up");
+        $this->setName("{$this->getType()->getValue()}:up");
         $this->setDescription("Apply migrations to databases");
         $this->addArgument(
             "db-name",
@@ -47,6 +47,11 @@ class Up extends AbstractMigrationCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-
+        $this->getMigrationComponent()->migrationsUp(
+            $this->getType(),
+            $input->getArgument("db-name"),
+            $input->getArgument("migration-id"),
+            $input->getOption("only-single")
+        );
     }
 }

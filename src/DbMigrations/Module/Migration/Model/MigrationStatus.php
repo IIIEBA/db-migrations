@@ -6,6 +6,7 @@ namespace DbMigrations\Module\Migration\Model;
 
 use BaseExceptions\Exception\InvalidArgument\EmptyStringException;
 use BaseExceptions\Exception\InvalidArgument\NotPositiveNumericException;
+use DbMigrations\Module\Migration\Component\MigrationGenerator;
 use DbMigrations\Module\Migration\Enum\MigrationStatusType;
 
 /**
@@ -38,12 +39,17 @@ class MigrationStatus implements MigrationStatusInterface
      * @var MigrationStatusType
      */
     private $type;
+    /**
+     * @var null|string
+     */
+    private $filename;
 
     /**
      * MigrationStatus constructor.
      *
      * @param string $migrationId
      * @param string $name
+     * @param string|null $filename
      * @param MigrationStatusType|null $type
      * @param int|float|null $startedAt
      * @param int|float|null $appliedAt
@@ -52,6 +58,7 @@ class MigrationStatus implements MigrationStatusInterface
     public function __construct(
         string $migrationId,
         string $name,
+        string $filename = null,
         MigrationStatusType $type = null,
         $startedAt = null,
         $appliedAt = null,
@@ -63,6 +70,14 @@ class MigrationStatus implements MigrationStatusInterface
 
         if ($name === "") {
             throw new EmptyStringException("name");
+        }
+
+        if ($this->filename !== null) {
+            if ($filename === "") {
+                throw new EmptyStringException("filename");
+            }
+        } else {
+            $filename = sprintf(MigrationGenerator::MIGRATION_CLASS_NAME_PATTERN, $migrationId, $name) . ".php";
         }
 
         if ($type === null) {
@@ -83,6 +98,7 @@ class MigrationStatus implements MigrationStatusInterface
 
         $this->migrationId = $migrationId;
         $this->name = $name;
+        $this->filename = $filename;
         $this->startedAt = floatval($startedAt);
         $this->appliedAt = floatval($appliedAt);
         $this->id = $id;
@@ -111,6 +127,14 @@ class MigrationStatus implements MigrationStatusInterface
     public function getType(): MigrationStatusType
     {
         return $this->type;
+    }
+
+    /**
+     * @return null|string
+     */
+    public function getFilename():? string
+    {
+        return $this->filename;
     }
 
     /**

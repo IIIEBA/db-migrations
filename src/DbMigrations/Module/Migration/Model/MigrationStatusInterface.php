@@ -28,6 +28,11 @@ interface MigrationStatusInterface
     public function getType(): MigrationStatusType;
 
     /**
+     * @return null|string
+     */
+    public function getFilename():? string;
+
+    /**
      * @return float
      */
     public function getStartedAt(): float;

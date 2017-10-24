@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace DbMigrations\Module\Migration\Command;
 
 use DbMigrations\Module\Migration\Enum\MigrationStatusType;
-use DbMigrations\Module\Migration\Enum\MigrationType;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -22,7 +21,7 @@ class Status extends AbstractMigrationCommand
      */
     protected function configure()
     {
-        $this->setName("structure:status");
+        $this->setName("{$this->getType()->getValue()}:status");
         $this->setDescription("Show status for migrations");
         $this->addArgument(
             "db-name",
@@ -43,10 +42,11 @@ class Status extends AbstractMigrationCommand
      */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $migrationId = $input->getArgument("migration-id");
         $status = $this->getMigrationComponent()->migrationsStatus(
-            new MigrationType(MigrationType::STRUCTURE),
+            $this->getType(),
             $input->getArgument("db-name"),
-            $input->getArgument("migration-id")
+            $migrationId
         );
 
         foreach ($status as $db) {
@@ -64,6 +64,10 @@ class Status extends AbstractMigrationCommand
             ]);
 
             foreach ($db->getMigrationStatusList() as $migration) {
+                if ($migrationId !== null && $migrationId !== $migration->getMigrationId()) {
+                    continue;
+                }
+
                 $table->addRow([
                     $migration->getMigrationId(),
                     $migration->getName(),

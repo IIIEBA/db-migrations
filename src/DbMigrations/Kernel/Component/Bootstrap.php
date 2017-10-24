@@ -16,6 +16,7 @@ use DbMigrations\Module\Migration\Component\MigrationGenerator;
 use DbMigrations\Module\Migration\Component\MigrationGeneratorInterface;
 use DbMigrations\Module\Migration\Component\MigrationRepositoryManager;
 use DbMigrations\Module\Migration\Component\MigrationRepositoryManagerInterface;
+use DbMigrations\Module\Migration\Enum\MigrationType;
 use DbMigrations\Module\Schema\Command\Dump;
 use DbMigrations\Module\Schema\Command\Init;
 use DbMigrations\Module\Schema\Command\Status;
@@ -196,11 +197,15 @@ class Bootstrap
         $this->application->add(new Status($this->schema, $this->stdInHelper, $this->logger));
         $this->application->add(new Dump($this->schema, $this->stdInHelper, $this->logger));
 
-        // Structure migration
-        $this->application->add(new Create($this->migration, $this->stdInHelper, $this->logger));
-        $this->application->add(new Up($this->migration, $this->stdInHelper, $this->logger));
-        $this->application->add(new Down($this->migration, $this->stdInHelper, $this->logger));
-        $this->application->add(new MigrationStatus($this->migration, $this->stdInHelper, $this->logger));
+        // Migration
+        foreach (MigrationType::getList() as $value) {
+            $type = new MigrationType($value);
+
+            $this->application->add(new Create($this->migration, $this->stdInHelper, $type, $this->logger));
+            $this->application->add(new Up($this->migration, $this->stdInHelper, $type, $this->logger));
+            $this->application->add(new Down($this->migration, $this->stdInHelper, $type, $this->logger));
+            $this->application->add(new MigrationStatus($this->migration, $this->stdInHelper, $type, $this->logger));
+        }
 
         $this->application->run($this->input, $this->output);
     }
