@@ -16,12 +16,12 @@ class %migrationName% extends AbstractMigration implements MigrationInterface
     /**
      * @var bool $isHeavyMigration
      */
-    private $isHeavyMigration = %isHeavyMigration%;
+    protected $isHeavyMigration = %isHeavyMigration%;
 
     /**
      * Apply migration
      */
-    public function up(): void
+    protected function up(): void
     {
         %upCode%
     }
@@ -29,18 +29,8 @@ class %migrationName% extends AbstractMigration implements MigrationInterface
     /**
      * Revert migration
      */
-    public function down(): void
+    protected function down(): void
     {
         %downCode%
-    }
-
-    /**
-     * Is heavy migration flag (for different apply and revert flow)
-     *
-     * @return bool
-     */
-    public function isHeavyMigration(): bool
-    {
-        return $this->isHeavyMigration;
     }
 }

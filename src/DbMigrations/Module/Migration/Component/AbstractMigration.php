@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace DbMigrations\Module\Migration\Component;
 
-use BaseExceptions\Exception\LogicException\NotImplementedException;
 use DbMigrations\Kernel\Util\LoggerTrait;
 use PDO;
 use Psr\Log\LoggerInterface;
@@ -13,7 +12,7 @@ use Psr\Log\LoggerInterface;
  * Class AbstractMigration
  * @package DbMigrations\Module\Migration\Component
  */
-class AbstractMigration implements MigrationInterface
+abstract class AbstractMigration implements MigrationInterface
 {
     use LoggerTrait;
 
@@ -136,18 +135,12 @@ class AbstractMigration implements MigrationInterface
     }
 
     /**
-     * Apply migration
+     * Is heavy migration flag (for different apply and revert flow)
+     *
+     * @return bool
      */
-    public function up(): void
+    final public function isHeavyMigration(): bool
     {
-        throw new NotImplementedException();
-    }
-
-    /**
-     * Revert migration
-     */
-    public function down(): void
-    {
-        throw new NotImplementedException();
+        return isset($this->isHeavyMigration) ? $this->isHeavyMigration : false;
     }
 }

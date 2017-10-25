@@ -6,20 +6,11 @@ namespace DbMigrations\Module\Migration\Component;
 
 /**
  * Class MigrationInterface
+ *
  * @package DbMigrations\Module\Migration\Component
  */
 interface MigrationInterface
 {
-    /**
-     * Apply migration
-     */
-    public function up(): void;
-
-    /**
-     * Revert migration
-     */
-    public function down(): void;
-
     /**
      * @return string
      */
@@ -29,4 +20,11 @@ interface MigrationInterface
      * @return string
      */
     public function getName(): string;
+
+    /**
+     * Is heavy migration flag (for different apply and revert flow)
+     *
+     * @return bool
+     */
+    public function isHeavyMigration(): bool;
 }
